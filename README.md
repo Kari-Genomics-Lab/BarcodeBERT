@@ -1,9 +1,6 @@
 # Bumblebee
 A pre-trained representation from a transformers model for inference on insect DNA barcoding data. 
 
-<p align="center">
-  <img src ="logo.png" alt="drawing" width="800"/>
-</p>
 
 1. Make sure you have all the required libraries before running (remove the --no-index flags if you re not training on CC)
 
@@ -19,3 +16,7 @@ A pre-trained representation from a transformers model for inference on insect D
 
 
 *Disclaimer*: The code is still a mess, I am still trying to figure it out.
+
+**To-Do**:
+Jupyter Notebook for Pre-Trainig [Next Week]
+Implement the MAP for evaluation [Next Week]
