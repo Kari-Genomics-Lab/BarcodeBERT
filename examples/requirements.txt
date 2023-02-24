@@ -1,0 +1,13 @@
+torch
+torchvision
+tensorboardX
+tensorboard
+scikit-learn >= 0.22.2
+seqeval
+pyahocorasick
+scipy
+statsmodels
+biopython
+pandas
+pybedtools
+sentencepiece

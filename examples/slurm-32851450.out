@@ -1,0 +1,189 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) libfabric/1.10.1     2) openmpi/4.0.3     3) ucx/1.8.0
+
+created virtual environment CPython3.8.10.final.0-64 in 13688ms
+  creator CPython3Posix(dest=/localscratch/pmillana.32851450.0/env, clear=False, global=False)
+  seeder FromAppData(download=False, pip=latest, setuptools=latest, wheel=latest, via=copy, app_data_dir=/home/pmillana/.local/share/virtualenv/seed-app-data/v1.0.1)
+  activators BashActivator,CShellActivator,FishActivator,PowerShellActivator,PythonActivator,XonshActivator
+Ignoring pip: markers 'python_version < "3"' don't match your environment
+Looking in links: /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/avx512, /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/avx2, /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic, /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic
+Obtaining file:///lustre03/project/6000742/pmillana/DNABERT
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/numpy-1.23.0+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/tokenizers-0.5.2+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/boto3-1.23.8+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/filelock-3.8.0+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/requests-2.28.1+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/tqdm-4.64.1+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/regex-2022.1.18+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/sentencepiece-0.1.96+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/sacremoses-0.0.49+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/s3transfer-0.5.2+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/botocore-1.26.8+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/jmespath-1.0.0+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/urllib3-1.26.12+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/charset_normalizer-2.1.1+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/idna-3.4+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/certifi-2022.9.24+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/click-8.1.3+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/joblib-1.2.0+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/six-1.16.0+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/python_dateutil-2.8.2+computecanada-py2.py3-none-any.whl
+Installing collected packages: numpy, tokenizers, six, python-dateutil, jmespath, urllib3, botocore, s3transfer, boto3, filelock, charset-normalizer, idna, certifi, requests, tqdm, regex, sentencepiece, click, joblib, sacremoses, transformers
+  Running setup.py develop for transformers
+Successfully installed boto3-1.23.8+computecanada botocore-1.26.8+computecanada certifi-2022.9.24+computecanada charset-normalizer-2.1.1+computecanada click-8.1.3+computecanada filelock-3.8.0+computecanada idna-3.4+computecanada jmespath-1.0.0+computecanada joblib-1.2.0+computecanada numpy-1.23.0+computecanada python-dateutil-2.8.2+computecanada regex-2022.1.18+computecanada requests-2.28.1+computecanada s3transfer-0.5.2+computecanada sacremoses-0.0.49+computecanada sentencepiece-0.1.96+computecanada six-1.16.0+computecanada tokenizers-0.5.2+computecanada tqdm-4.64.1+computecanada transformers urllib3-1.26.12+computecanada
+Ignoring pip: markers 'python_version < "3"' don't match your environment
+Looking in links: /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/avx512, /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/avx2, /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic, /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/avx512/torch-1.12.1+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/torchvision-0.13.1+torch1121.computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/tensorboardX-2.5.1+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/tensorboard-2.10.0+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/scikit_learn-1.1.2+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/seqeval-1.2.2+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/pyahocorasick-1.4.4+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/scipy-1.9.3+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/statsmodels-0.13.2+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/biopython-1.79+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/avx2/pandas-1.5.0+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/pybedtools-0.9.0+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/sentencepiece-0.1.91+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/typing_extensions-4.4.0+computecanada-py3-none-any.whl
+Requirement already satisfied: numpy in /localscratch/pmillana.32851450.0/env/lib/python3.8/site-packages (from torchvision->-r requirements.txt (line 2)) (1.23.0+computecanada)
+Requirement already satisfied: requests in /localscratch/pmillana.32851450.0/env/lib/python3.8/site-packages (from torchvision->-r requirements.txt (line 2)) (2.28.1+computecanada)
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/avx2/Pillow_SIMD-9.0.0.post1+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/avx2/protobuf-3.19.4+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/google_auth_oauthlib-0.4.6+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/Markdown-3.4.1+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/absl_py-1.2.0+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/tensorboard_data_server-0.6.1+computecanada-py3-none-linux_x86_64.whl
+Requirement already satisfied: setuptools>=41.0.0 in /localscratch/pmillana.32851450.0/env/lib/python3.8/site-packages (from tensorboard->-r requirements.txt (line 4)) (46.1.3)
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/tensorboard_plugin_wit-1.8.1+computecanada-py3-none-any.whl
+Requirement already satisfied: wheel>=0.26 in /localscratch/pmillana.32851450.0/env/lib/python3.8/site-packages (from tensorboard->-r requirements.txt (line 4)) (0.34.2)
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/google_auth-2.11.0+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/Werkzeug-2.2.2+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/grpcio-1.47.0+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/threadpoolctl-3.1.0+computecanada-py3-none-any.whl
+Requirement already satisfied: joblib>=1.0.0 in /localscratch/pmillana.32851450.0/env/lib/python3.8/site-packages (from scikit-learn>=0.22.2->-r requirements.txt (line 5)) (1.2.0+computecanada)
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/packaging-21.3+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/patsy-0.5.2+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/pytz-2022.6+computecanada-py3-none-any.whl
+Requirement already satisfied: python-dateutil>=2.8.1 in /localscratch/pmillana.32851450.0/env/lib/python3.8/site-packages (from pandas->-r requirements.txt (line 11)) (2.8.2+computecanada)
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/avx2/pysam-0.20.0+computecanada-cp38-cp38-linux_x86_64.whl
+Requirement already satisfied: six in /localscratch/pmillana.32851450.0/env/lib/python3.8/site-packages (from pybedtools->-r requirements.txt (line 12)) (1.16.0+computecanada)
+Requirement already satisfied: idna<4,>=2.5 in /localscratch/pmillana.32851450.0/env/lib/python3.8/site-packages (from requests->torchvision->-r requirements.txt (line 2)) (3.4+computecanada)
+Requirement already satisfied: certifi>=2017.4.17 in /localscratch/pmillana.32851450.0/env/lib/python3.8/site-packages (from requests->torchvision->-r requirements.txt (line 2)) (2022.9.24+computecanada)
+Requirement already satisfied: charset-normalizer<3,>=2 in /localscratch/pmillana.32851450.0/env/lib/python3.8/site-packages (from requests->torchvision->-r requirements.txt (line 2)) (2.1.1+computecanada)
+Requirement already satisfied: urllib3<1.27,>=1.21.1 in /localscratch/pmillana.32851450.0/env/lib/python3.8/site-packages (from requests->torchvision->-r requirements.txt (line 2)) (1.26.12+computecanada)
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/requests_oauthlib-1.3.1+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/importlib_metadata-4.12.0+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/rsa-4.9+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/pyasn1_modules-0.2.8+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/cachetools-5.2.0+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/MarkupSafe-2.1.1+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/pyparsing-3.0.9+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/oauthlib-3.2.0+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/zipp-3.10.0+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/pyasn1-0.4.8+computecanada-py2.py3-none-any.whl
+Installing collected packages: typing-extensions, torch, pillow-simd, torchvision, protobuf, tensorboardX, pyasn1, rsa, pyasn1-modules, cachetools, google-auth, oauthlib, requests-oauthlib, google-auth-oauthlib, zipp, importlib-metadata, markdown, absl-py, tensorboard-data-server, tensorboard-plugin-wit, MarkupSafe, werkzeug, grpcio, tensorboard, threadpoolctl, scipy, scikit-learn, seqeval, pyahocorasick, pyparsing, packaging, pytz, pandas, patsy, statsmodels, biopython, pysam, pybedtools, sentencepiece
+  Attempting uninstall: sentencepiece
+    Found existing installation: sentencepiece 0.1.96+computecanada
+    Uninstalling sentencepiece-0.1.96+computecanada:
+      Successfully uninstalled sentencepiece-0.1.96+computecanada
+Successfully installed MarkupSafe-2.1.1+computecanada absl-py-1.2.0+computecanada biopython-1.79+computecanada cachetools-5.2.0+computecanada google-auth-2.11.0+computecanada google-auth-oauthlib-0.4.6+computecanada grpcio-1.47.0+computecanada importlib-metadata-4.12.0+computecanada markdown-3.4.1+computecanada oauthlib-3.2.0+computecanada packaging-21.3+computecanada pandas-1.5.0+computecanada patsy-0.5.2+computecanada pillow-simd-9.0.0.post1+computecanada protobuf-3.19.4+computecanada pyahocorasick-1.4.4+computecanada pyasn1-0.4.8+computecanada pyasn1-modules-0.2.8+computecanada pybedtools-0.9.0+computecanada pyparsing-3.0.9+computecanada pysam-0.20.0+computecanada pytz-2022.6+computecanada requests-oauthlib-1.3.1+computecanada rsa-4.9+computecanada scikit-learn-1.1.2+computecanada scipy-1.9.3+computecanada sentencepiece-0.1.91+computecanada seqeval-1.2.2+computecanada statsmodels-0.13.2+computecanada tensorboard-2.10.0+computecanada tensorboard-data-server-0.6.1+computecanada tensorboard-plugin-wit-1.8.1+computecanada tensorboardX-2.5.1+computecanada threadpoolctl-3.1.0+computecanada torch-1.12.1+computecanada torchvision-0.13.1+torch1121.computecanada typing-extensions-4.4.0+computecanada werkzeug-2.2.2+computecanada zipp-3.10.0+computecanada
+Libraries Installed
+11/14/2022 13:03:55 - WARNING - __main__ -   Process rank: -1, device: cuda:0, n_gpu: 4, distributed training: False, 16-bits training: False
+11/14/2022 13:03:55 - INFO - transformers.configuration_utils -   loading configuration file /home/pmillana/projects/def-khill22/pmillana/DNABERT/src/transformers/dnabert-config/bert-config-4/config.json
+11/14/2022 13:03:55 - INFO - transformers.configuration_utils -   Model config BertConfig {
+  "architectures": [
+    "BertForMaskedLM"
+  ],
+  "attention_probs_dropout_prob": 0.1,
+  "bos_token_id": 0,
+  "do_sample": false,
+  "eos_token_ids": 0,
+  "finetuning_task": null,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 768,
+  "id2label": {
+    "0": "LABEL_0",
+    "1": "LABEL_1"
+  },
+  "initializer_range": 0.02,
+  "intermediate_size": 3072,
+  "is_decoder": false,
+  "label2id": {
+    "LABEL_0": 0,
+    "LABEL_1": 1
+  },
+  "layer_norm_eps": 1e-12,
+  "length_penalty": 1.0,
+  "max_length": 20,
+  "max_position_embeddings": 512,
+  "model_type": "bert",
+  "num_attention_heads": 12,
+  "num_beams": 1,
+  "num_hidden_layers": 12,
+  "num_labels": 2,
+  "num_return_sequences": 1,
+  "num_rnn_layer": 1,
+  "output_attentions": false,
+  "output_hidden_states": false,
+  "output_past": true,
+  "pad_token_id": 0,
+  "pruned_heads": {},
+  "repetition_penalty": 1.0,
+  "rnn": "lstm",
+  "rnn_dropout": 0.0,
+  "rnn_hidden": 768,
+  "split": 10,
+  "temperature": 1.0,
+  "top_k": 50,
+  "top_p": 1.0,
+  "torchscript": false,
+  "type_vocab_size": 2,
+  "use_bfloat16": false,
+  "vocab_size": 261
+}
+
+11/14/2022 13:03:55 - INFO - transformers.tokenization_utils -   Model name '/home/pmillana/projects/def-khill22/pmillana/DNABERT/vocab_4' not found in model shortcut name list (dna3, dna4, dna5, dna6). Assuming '/home/pmillana/projects/def-khill22/pmillana/DNABERT/vocab_4' is a path, a model identifier, or url to a directory containing tokenizer files.
+11/14/2022 13:03:55 - INFO - transformers.tokenization_utils -   Didn't find file /home/pmillana/projects/def-khill22/pmillana/DNABERT/vocab_4/added_tokens.json. We won't load it.
+11/14/2022 13:03:55 - INFO - transformers.tokenization_utils -   Didn't find file /home/pmillana/projects/def-khill22/pmillana/DNABERT/vocab_4/special_tokens_map.json. We won't load it.
+11/14/2022 13:03:55 - INFO - transformers.tokenization_utils -   Didn't find file /home/pmillana/projects/def-khill22/pmillana/DNABERT/vocab_4/tokenizer_config.json. We won't load it.
+11/14/2022 13:03:55 - INFO - transformers.tokenization_utils -   loading file /home/pmillana/projects/def-khill22/pmillana/DNABERT/vocab_4/vocab.txt
+11/14/2022 13:03:55 - INFO - transformers.tokenization_utils -   loading file None
+11/14/2022 13:03:55 - INFO - transformers.tokenization_utils -   loading file None
+11/14/2022 13:03:55 - INFO - transformers.tokenization_utils -   loading file None
+11/14/2022 13:03:55 - INFO - __main__ -   Training new model from scratch
+11/14/2022 13:03:58 - INFO - __main__ -   Training/evaluation parameters Namespace(adam_epsilon=1e-06, beta1=0.9, beta2=0.98, block_size=512, cache_dir=None, config_name='/home/pmillana/projects/def-khill22/pmillana/DNABERT/src/transformers/dnabert-config/bert-config-4/config.json', device=device(type='cuda', index=0), do_eval=True, do_train=True, eval_all_checkpoints=False, eval_data_file='/home/pmillana/projects/def-khill22/pmillana/DNABERT/Training_4.txt', evaluate_during_training=True, fp16=False, fp16_opt_level='O1', gradient_accumulation_steps=25, learning_rate=0.0004, line_by_line=True, local_rank=-1, logging_steps=500, max_grad_norm=1.0, max_steps=200000, mlm=True, mlm_probability=0.025, model_name_or_path=None, model_type='dna', n_gpu=4, n_process=24, no_cuda=False, num_train_epochs=1.0, output_dir='output4', overwrite_cache=False, overwrite_output_dir=True, per_gpu_eval_batch_size=6, per_gpu_train_batch_size=10, save_steps=500, save_total_limit=20, seed=42, server_ip='', server_port='', should_continue=False, tokenizer_name='/home/pmillana/projects/def-khill22/pmillana/DNABERT/vocab_4', train_data_file='/home/pmillana/projects/def-khill22/pmillana/DNABERT/Training_4.txt', warmup_steps=10000, weight_decay=0.01)
+11/14/2022 13:03:58 - INFO - __main__ -   Creating features from dataset file at /home/pmillana/projects/def-khill22/pmillana/DNABERT/Training_4.txt
+============================================================
+<class 'transformers.tokenization_dna.DNATokenizer'>
+.............AAJAJAHJAKHAJHKAHKHAKAHAAAAAAAAAAAAAA..........................
+/home/pmillana/projects/def-khill22/pmillana/DNABERT/Training_4.txt
+0 start
+1 start
+2 start
+3 start
+4 start
+5 start
+6 start
+7 start
+8 start
+9 start
+10 start
+11 start
+12 start
+13 start
+14 start
+15 start
+16 start
+17 start
+18 start
+19 start
+20 start
+21 start
+22 start
+23 start
+slurmstepd: error: *** JOB 32851450 ON bg11213 CANCELLED AT 2022-11-15T17:01:46 DUE TO TIME LIMIT ***
+slurmstepd: error: Detected 12 oom-kill event(s) in StepId=32851450.batch. Some of your processes may have been killed by the cgroup out-of-memory handler.
