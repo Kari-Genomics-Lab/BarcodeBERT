@@ -64,9 +64,9 @@ def train(args, dataloader, model, device):
         # every 50 epoch save the checkpoints and save the loss in a list
         if epoch % 50 == 0:
             torch.save(model.state_dict(), os.path.join(args.saving_path, "model_" + str(epoch) + '.pth'))
-            torch.save(optimizer.state_dict(), args.saving_path + "optimizer_" + str(epoch) + '.pth')
+            torch.save(optimizer.state_dict(), os.path.join(args.saving_path, "optimizer_" + str(epoch) + '.pth'))
 
-            a_file = open(args.saving_path + "loss.pkl", "wb")
+            a_file = open(os.path.join(args.saving_path,"loss.pkl", "wb"))
             pickle.dump(epoch_loss_list, a_file)
             a_file.close()
 
