@@ -6,4 +6,4 @@ torchvision
 scikit-learn
 scipy
 umap-learn
-
+tqdm
