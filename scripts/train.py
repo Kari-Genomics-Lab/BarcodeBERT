@@ -14,7 +14,6 @@ from util.model import BERT
 from util.dataset import SampleDNAData
 
 
-
 def init_dataset_and_loader(args):
     dataset = SampleDNAData(file_path=args.data_path, k_mer=args.k_mer, data_count=args.data_count,
                             max_mask_count=args.max_mask_count, max_len=args.max_len)
@@ -66,7 +65,7 @@ def train(args, dataloader, model, device):
             torch.save(model.state_dict(), os.path.join(args.saving_path, "model_" + str(epoch) + '.pth'))
             torch.save(optimizer.state_dict(), os.path.join(args.saving_path, "optimizer_" + str(epoch) + '.pth'))
 
-            a_file = open(os.path.join(args.saving_path,"loss.pkl", "wb"))
+            a_file = open(os.path.join(args.saving_path, "loss.pkl"), "wb")
             pickle.dump(epoch_loss_list, a_file)
             a_file.close()
 
