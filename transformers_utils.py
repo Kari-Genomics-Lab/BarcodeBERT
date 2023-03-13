@@ -32,13 +32,13 @@ class PabloDNADataset:
         if replace_orig:
             self.df = clean_df
         return clean_df
-    
+
     def change_RXY2N(self, col_names, replace_orig=False):
-      full_pattern = re.compile('[^ACGTN\-]') 
-      self.df[col_names] = self.df[col_names].apply(lambda x: re.sub(full_pattern, 'N', x))
-      # if replace_orig:
-      #   self.df[col_names] = clean_nucleotides
-      # return clean_str_df
+        full_pattern = re.compile('[^ACGTN\-]')
+        self.df[col_names] = self.df[col_names].apply(lambda x: re.sub(full_pattern, 'N', x))
+        # if replace_orig:
+        #   self.df[col_names] = clean_nucleotides
+        # return clean_str_df
 
 
     def generate_mini_sample(self, dataframe=None, bin_count=20, output_path="mini_sample.tsv"):
@@ -195,35 +195,34 @@ class SampleDNAData(Dataset):
         label = label.type(torch.LongTensor)
 
         return ids, seg, msk_pos, msk_tok, label
-    
+
 class Embedding(nn.Module):
-    def __init__(self, vocab_size, d_model, maxlen, n_segments, device):
+    def __init__(self, vocab_size, d_model, maxlen, n_segments):
         super(Embedding, self).__init__()
         self.tok_embed = nn.Embedding(int(vocab_size), int(d_model))  # token embedding
         self.pos_embed = nn.Embedding(int(maxlen), int(d_model))  # position embedding
         self.seg_embed = nn.Embedding(int(n_segments), int(d_model))  # segment(token type) embedding
         self.norm = nn.LayerNorm(int(d_model))
-        self.device = device
 
     def forward(self, x, seg):
         seq_len = x.size(1)
-        pos = torch.arange(seq_len, dtype=torch.long, device=self.device)
+        pos = torch.arange(seq_len, dtype=torch.long)
         pos = pos.unsqueeze(0).expand_as(x)  # (seq_len,) -> (batch_size, seq_len)
         embedding = self.tok_embed(x) + self.pos_embed(pos) + self.seg_embed(seg)
         return self.norm(embedding)
 
 
 class GELU(nn.Module):
+
     def forward(self, x):
         return 0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
 
 
-def get_attn_pad_mask(seq_q, seq_k, device):
+def get_attn_pad_mask(seq_q, seq_k):
     batch_size, len_q = seq_q.size()
     batch_size, len_k = seq_k.size()
     # eq(zero) is PAD token
     pad_attn_mask = seq_k.data.eq(0).unsqueeze(1)  # batch_size x 1 x len_k(=len_q), one is masking
-    pad_attn_mask = pad_attn_mask.to(device)
     return pad_attn_mask.expand(batch_size, len_q, len_k)  # batch_size x len_q x len_k
 
 
@@ -252,29 +251,31 @@ class MultiHeadAttention(nn.Module):
         self.n_heads = n_heads
         self.d_model = d_model
 
-        self.linear = nn.Linear(self.n_heads * self.d_v, self.d_model)
-
-        self.layernorm = nn.LayerNorm(self.d_model)
-
     def forward(self, Q, K, V, attn_mask):
         # q: [batch_size x len_q x d_model], k: [batch_size x len_k x d_model], v: [batch_size x len_k x d_model]
         residual, batch_size = Q, Q.size(0)
         # (B, S, D) -proj-> (B, S, D) -split-> (B, S, H, W) -trans-> (B, H, S, W)
-        q_s = self.W_Q(Q).view(batch_size, -1, self.n_heads, self.d_k).transpose(1, 2)  # q_s: [batch_size x n_heads x len_q x d_k]
-        k_s = self.W_K(K).view(batch_size, -1, self.n_heads, self.d_k).transpose(1, 2)  # k_s: [batch_size x n_heads x len_k x d_k]
-        v_s = self.W_V(V).view(batch_size, -1, self.n_heads, self.d_v).transpose(1, 2)  # v_s: [batch_size x n_heads x len_k x d_v]
+        q_s = self.W_Q(Q).view(batch_size, -1, self.n_heads, self.d_k).transpose(1,
+                                                                                 2)  # q_s: [batch_size x n_heads x len_q x d_k]
+        k_s = self.W_K(K).view(batch_size, -1, self.n_heads, self.d_k).transpose(1,
+                                                                                 2)  # k_s: [batch_size x n_heads x len_k x d_k]
+        v_s = self.W_V(V).view(batch_size, -1, self.n_heads, self.d_v).transpose(1,
+                                                                                 2)  # v_s: [batch_size x n_heads x len_k x d_v]
 
-        attn_mask = attn_mask.unsqueeze(1).repeat(1, self.n_heads, 1, 1)  # attn_mask : [batch_size x n_heads x len_q x len_k]
+        attn_mask = attn_mask.unsqueeze(1).repeat(1, self.n_heads, 1,
+                                                  1)  # attn_mask : [batch_size x n_heads x len_q x len_k]
 
         # context: [batch_size x n_heads x len_q x d_v], attn: [batch_size x n_heads x len_q(=len_k) x len_k(=len_q)]
         context, attn = ScaledDotProductAttention(self.d_k)(q_s, k_s, v_s, attn_mask)
-        context = context.transpose(1, 2).contiguous().view(batch_size, -1, self.n_heads * self.d_v)  # context: [batch_size x len_q x n_heads * d_v]
-        output = self.linear(context)
+        context = context.transpose(1, 2).contiguous().view(batch_size, -1,
+                                                            self.n_heads * self.d_v)  # context: [batch_size x len_q x n_heads * d_v]
+        output = nn.Linear(self.n_heads * self.d_v, self.d_model)(context)
 
-        return self.layernorm(output + residual), attn  # output: [batch_size x len_q x d_model]
+        return nn.LayerNorm(self.d_model)(output + residual), attn  # output: [batch_size x len_q x d_model]
 
 
 class PoswiseFeedForwardNet(nn.Module):
+
     def __init__(self, d_model, d_ff):
         super(PoswiseFeedForwardNet, self).__init__()
         self.l1 = nn.Linear(d_model, d_ff)
@@ -306,9 +307,9 @@ class ScaledDotProductAttention(nn.Module):
 
 
 class BERT(nn.Module):
-    def __init__(self, vocab_size, d_model, maxlen, n_segments, n_layers, d_k, d_v, n_heads, device):
+    def __init__(self, vocab_size, d_model, maxlen, n_segments, n_layers, d_k, d_v, n_heads):
         super(BERT, self).__init__()
-        self.embedding = Embedding(vocab_size, d_model, maxlen, n_segments, device)
+        self.embedding = Embedding(vocab_size, d_model, maxlen, n_segments)
         self.layers = nn.ModuleList([EncoderLayer(d_model, d_k, d_v, n_heads) for _ in range(n_layers)])
         self.fc = nn.Linear(d_model, d_model)
         self.activ1 = nn.Tanh()
@@ -322,12 +323,10 @@ class BERT(nn.Module):
         self.decoder = nn.Linear(n_dim, n_vocab, bias=False)
         self.decoder.weight = embed_weight
         self.decoder_bias = nn.Parameter(torch.zeros(n_vocab))
-        self.device=device
-        self.to(self.device)
 
     def forward(self, input_ids, segment_ids, masked_pos):
         output = self.embedding(input_ids, segment_ids)
-        enc_self_attn_mask = get_attn_pad_mask(input_ids, input_ids, self.device)
+        enc_self_attn_mask = get_attn_pad_mask(input_ids, input_ids)
         for layer in self.layers:
             # embedding layer
             output, enc_self_attn = layer(output, enc_self_attn_mask)
