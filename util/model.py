@@ -133,6 +133,7 @@ class BERT(nn.Module):
         self.device=device
         self.to(self.device)
 
+
     def forward(self, input_ids, segment_ids, masked_pos):
         output = self.embedding(input_ids, segment_ids)
         enc_self_attn_mask = get_attn_pad_mask(input_ids, input_ids, self.device)
@@ -153,3 +154,12 @@ class BERT(nn.Module):
         logits_lm = self.decoder(h_masked) + self.decoder_bias  # [batch_size, max_pred, n_vocab]
 
         return logits_lm, logits_clsf, output
+
+    def get_embeddings(self, input_ids, segment_ids):
+        output = self.embedding(input_ids, segment_ids)
+        enc_self_attn_mask = get_attn_pad_mask(input_ids, input_ids, self.device)
+        for layer in self.layers:
+            # embedding layer
+            output, enc_self_attn = layer(output, enc_self_attn_mask)
+
+        return output

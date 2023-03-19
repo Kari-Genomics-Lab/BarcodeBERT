@@ -187,3 +187,60 @@ class SampleDNAData(Dataset):
         label = label.type(torch.LongTensor)
 
         return ids, seg, msk_pos, msk_tok, label
+
+class test_DNA_Data(Dataset):
+    """Barcode Dataset"""
+
+    def __init__(self, file_path, k_mer=4, max_len=512):
+        pablo_dataset = PabloDNADataset(file_path)
+        # for removing X,R,Y letters from data
+        pablo_dataset.change_RXY2N("nucleotides")
+        self.dna_nucleotides = list(pablo_dataset.df["nucleotides"].values)
+        self.species = list(pablo_dataset.df["species_name"].values)
+        word_list = SampleDNAData.get_all_kmers(k_mer)
+
+        word_dict = {'[PAD]': 0, '[CLS]': 1, '[SEP]': 2, '[MASK]': 3}
+        for i, w in enumerate(word_list):
+            word_dict[w] = i + 4
+            number_dict = {i: w for i, w in enumerate(word_dict)}  # TODO: try move this out from the loop.
+
+
+        self.word_dict = word_dict
+        self.number_dict = number_dict
+        self.vocab_size = len(word_dict)
+        self.max_len = max_len
+
+        self.IDS = []
+        self.SEGMENTS = []
+        self.SPECIES = []
+
+        for seq, species in zip(self.dna_nucleotides, self.species):
+            if len(seq) > (self.max_len - 2):
+                seq = seq[:self.max_len - 2]
+            tokens = tokenizer(seq, word_dict, 4, stride=1)
+            input_ids = [word_dict['[CLS]']] + tokens + [word_dict['[SEP]']]
+            segment_ids = [0] * (1 + len(tokens) ) + [1] * (1)
+            masked_tokens, masked_pos = [], [] # No mask for testing
+
+            # Zero Paddings
+            n_pad = max_len - len(input_ids)
+            if n_pad > 0:
+                input_ids.extend([0] * n_pad)
+                segment_ids.extend([0] * n_pad)
+
+            self.IDS.append(input_ids)
+            self.SEGMENTS.append(segment_ids)
+            self.SPECIES.append(species)
+
+    def __len__(self):
+        return len(self.dna_nucleotides)
+
+    def __getitem__(self, idx):
+        ids = torch.Tensor(self.IDS[idx])
+        seg = torch.Tensor(self.SEGMENTS[idx])
+        # msk_pos = torch.Tensor([])
+        label = self.SPECIES[idx]
+
+        ids, seg = ids.type(torch.IntTensor), seg.type(torch.IntTensor) # [msk_pos.type(torch.int64)]
+
+        return  {'input':[ids, seg], 'label':label}

@@ -1,6 +1,6 @@
 import argparse
 import os
-import sys
+
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
@@ -8,6 +8,7 @@ import torch
 import pickle
 from tqdm import tqdm
 from os.path import dirname, abspath
+import sys
 project_dir = dirname(dirname(abspath(__file__)))
 sys.path.append(project_dir)
 from util.model import BERT
