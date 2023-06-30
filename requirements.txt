@@ -7,3 +7,6 @@ scikit-learn
 scipy
 umap-learn
 tqdm
+transformers
+chardet
+wandb

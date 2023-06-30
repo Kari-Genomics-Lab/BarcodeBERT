@@ -1,15 +1,15 @@
 import random
 import re
 from random import randrange, shuffle, random
-
+from tqdm import tqdm
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-
 class PabloDNADataset:
     def __init__(self, file_path):
-        self.df = pd.read_csv(file_path, sep="\t", encoding="unicode_escape")
+        # self.df = pd.read_csv(file_path, sep="\t", encoding="unicode_escape")
+        self.df = pd.read_csv(file_path, sep='\t', encoding='utf-8')
 
     def clean_nan(self, col_names, replace_orig=False):
         clean_df = self.df.dropna(subset=col_names)
@@ -19,8 +19,8 @@ class PabloDNADataset:
         return clean_df
 
     def change_RXY2N(self, col_names, replace_orig=False):
-        full_pattern = re.compile('[^ACGTN\-]')
-        self.df[col_names] = self.df[col_names].apply(lambda x: re.sub(full_pattern, 'N', x))
+        full_pattern = re.compile('[^ACGTN]')
+        self.df[col_names] = self.df[col_names].apply(lambda x: re.sub(full_pattern, 'N', str(x)))
         # if replace_orig:
         #   self.df[col_names] = clean_nucleotides
         # return clean_str_df
@@ -71,7 +71,7 @@ class SampleDNAData(Dataset):
             return result
 
         if alphabet is None:
-            alphabet = ["A", "C", "G", "T", "-", "N"]
+            alphabet = ["A", "C", "G", "T", "N"]
         k_mer_counts = len(alphabet) ** k_mer_length
         all_k_mers_list = []
         for i in range(k_mer_counts):
@@ -83,17 +83,84 @@ class SampleDNAData(Dataset):
 
         return all_k_mers_list
 
-    def __init__(self, file_path, k_mer=4, data_count=8, max_mask_count=5, max_len=256):
+    def _generate_processed_data(self, dna_a, dna_b, label):
+        rand_len = randrange(128, 256)
+
+        dna_a = dna_a[0:len(dna_a) // 2][0:rand_len]
+        dna_b = dna_b[len(dna_b) // 2:][0:rand_len]
+        tokens_a = tokenizer(dna_a, self.word_dict, self.k_mer, stride=1)
+        tokens_b = tokenizer(dna_b, self.word_dict, self.k_mer, stride=1)
+
+        input_ids = [self.word_dict['[CLS]']] + tokens_a + [self.word_dict['[SEP]']] + tokens_b + [
+            self.word_dict['[SEP]']]
+        segment_ids = [0] * (1 + len(tokens_a) + 1) + [1] * (len(tokens_b) + 1)
+
+        # MASK LM  (15 % of tokens in one sentence)
+        n_pred = min(self.max_mask_count, max(1, int(round(len(input_ids) * 0.15)))) // self.k_mer
+
+        cand_masked_pos = [i for i, token in enumerate(input_ids)
+                           if token != self.word_dict['[CLS]'] and token != self.word_dict['[SEP]']]
+
+        # remove N and gaps from cand_masked_pos
+        cand_masked_pos_copy = cand_masked_pos.copy()
+        for position in cand_masked_pos_copy:
+            remove_flag = False
+            for s in range(self.k_mer):
+                if position + s < len(input_ids):
+                    key = self.number_dict[input_ids[position + s]]
+                    if ("N" in key) or ("-" in key):
+                        remove_flag = True
+                        break
+            if remove_flag:
+                cand_masked_pos.remove(position)
+
+        shuffle(cand_masked_pos)
+
+        # if the position remains is less than 15%, mask them all
+        if len(cand_masked_pos) < n_pred:
+            n_pred = len(cand_masked_pos)
+
+        masked_tokens, masked_pos = [], []
+        attention_mask = [1] * len(input_ids)
+
+        for pos in cand_masked_pos[:n_pred]:
+            for s in range(self.k_mer):
+                if pos + s < len(input_ids):
+                    masked_pos.append(pos + s)
+                    masked_tokens.append(input_ids[pos + s])
+                    attention_mask[pos + s] = 0
+                    input_ids[pos + s] = self.word_dict['[MASK]']  # make mask
+
+        # Zero Paddings
+        n_pad = self.max_len - len(input_ids)
+        input_ids.extend([0] * n_pad)
+        segment_ids.extend([0] * n_pad)
+        attention_mask.extend([1] * n_pad)
+
+        # Zero Padding (100% - 15%) tokens
+        if self.max_mask_count > len(masked_pos):
+            n_pad = self.max_mask_count - len(masked_pos)
+            masked_tokens.extend([0] * n_pad)
+            masked_pos.extend([0] * n_pad)
+
+        return [input_ids, segment_ids, attention_mask, masked_tokens, masked_pos, label]
+
+    def __init__(self, file_path, k_mer=4, max_mask_count=5, max_len=256):
+        self.k_mer = k_mer
+        self.max_mask_count = max_mask_count
+        self.max_len = max_len
         pablo_dataset = PabloDNADataset(file_path)
         # for removing X,R,Y letters from data
         pablo_dataset.change_RXY2N("nucleotides")
         self.dna_nucleotides = list(pablo_dataset.df["nucleotides"].values)
-        word_list = SampleDNAData.get_all_kmers(k_mer)
+        self.data_count = len(self.dna_nucleotides)
+        word_list = SampleDNAData.get_all_kmers(self.k_mer)
 
+        number_dict = dict()
         word_dict = {'[PAD]': 0, '[CLS]': 1, '[SEP]': 2, '[MASK]': 3}
         for i, w in enumerate(word_list):
             word_dict[w] = i + 4
-            number_dict = {i: w for i, w in enumerate(word_dict)}  # TODO: try move this out from the loop.
+            number_dict = {i: w for i, w in enumerate(word_dict)}
 
         self.word_dict = word_dict
         self.number_dict = number_dict
@@ -102,74 +169,17 @@ class SampleDNAData(Dataset):
         self.max_len = max_len
 
         self.batch = []
-        positive = negative = 0
-        while positive != data_count / 2 or negative != data_count / 2:
-            is_positive = randrange(0, 2)
 
-            tokens_a_index, tokens_b_index = 0, 0
-            while tokens_a_index == tokens_b_index:
-                tokens_a_index, tokens_b_index = randrange(len(self.dna_nucleotides)), randrange(
-                    len(self.dna_nucleotides))
+        for data_index in tqdm(range(self.data_count)):
+            dna_a = self.dna_nucleotides[data_index]
 
-            if is_positive:
-                dna_a = self.dna_nucleotides[tokens_a_index]
-                dna_b = dna_a
-            else:
-                dna_a = self.dna_nucleotides[tokens_a_index]
-                dna_b = self.dna_nucleotides[tokens_b_index]
+            tokens_b_index = data_index
+            while data_index == tokens_b_index:
+                tokens_b_index = randrange(len(self.dna_nucleotides))
+            dna_b = self.dna_nucleotides[tokens_b_index]
 
-            rand_len = randrange(128, 256)
-
-            dna_a = dna_a[0:len(dna_a) // 2][0:rand_len]  # max_len//2 - 3]
-            dna_b = dna_b[len(dna_b) // 2:][0:rand_len]  # max_len//2 - 3]
-            tokens_a = tokenizer(dna_a, word_dict, k_mer, stride=1)
-            tokens_b = tokenizer(dna_b, word_dict, k_mer, stride=1)
-            input_ids = [word_dict['[CLS]']] + tokens_a + [word_dict['[SEP]']] + tokens_b + [word_dict['[SEP]']]
-            segment_ids = [0] * (1 + len(tokens_a) + 1) + [1] * (len(tokens_b) + 1)
-
-            # MASK LM
-            n_pred = min(max_mask_count, max(1, int(round(len(input_ids) * 0.15))))  # 15 % of tokens in one sentence
-            cand_masked_pos = [i for i, token in enumerate(input_ids)
-                               if token != word_dict['[CLS]'] and token != word_dict['[SEP]']]
-            shuffle(cand_masked_pos)
-
-            # remove N and gaps from cand_masked_pos
-            cand_masked_pos_copy = cand_masked_pos.copy()
-            for position in cand_masked_pos_copy:
-                key = list(word_dict.keys())[list(word_dict.values()).index(position)]
-                if ("N" in key) or ("-" in key):
-                    cand_masked_pos.remove(position)
-            # if the position remains is less than 15%, mask them all
-            if len(cand_masked_pos) < n_pred:
-                n_pred = len(cand_masked_pos)
-
-            masked_tokens, masked_pos = [], []
-            for pos in cand_masked_pos[:n_pred]:
-                masked_pos.append(pos)
-                masked_tokens.append(input_ids[pos])
-                # if random() < 0.8:  # 80%
-                input_ids[pos] = word_dict['[MASK]']  # make mask
-                # elif random() < 0.5:  # 10%
-                #     index = randint(0, vocab_size - 1)  # random index in vocabulary
-                #     input_ids[pos] = word_dict[number_dict[index]]  # replace
-
-            # Zero Paddings
-            n_pad = max_len - len(input_ids)
-            input_ids.extend([0] * n_pad)
-            segment_ids.extend([0] * n_pad)
-
-            # Zero Padding (100% - 15%) tokens
-            if max_mask_count > n_pred:
-                n_pad = max_mask_count - n_pred
-                masked_tokens.extend([0] * n_pad)
-                masked_pos.extend([0] * n_pad)
-
-            if is_positive and positive < data_count / 2:
-                self.batch.append([input_ids, segment_ids, masked_tokens, masked_pos, True])  # IsNext
-                positive += 1
-            elif not is_positive and negative < data_count / 2:
-                self.batch.append([input_ids, segment_ids, masked_tokens, masked_pos, False])  # NotNext
-                negative += 1
+            self.batch.append(self._generate_processed_data(dna_a=dna_a, dna_b=dna_a, label=True))
+            self.batch.append(self._generate_processed_data(dna_a=dna_a, dna_b=dna_b, label=False))
 
     def __len__(self):
         return len(self.batch)
@@ -177,70 +187,14 @@ class SampleDNAData(Dataset):
     def __getitem__(self, idx):
         ids = torch.Tensor(self.batch[idx][0])
         seg = torch.Tensor(self.batch[idx][1])
-        msk_tok = torch.Tensor(self.batch[idx][2])
-        msk_pos = torch.Tensor(self.batch[idx][3])
-        label = torch.Tensor([self.batch[idx][4]])
+        mask = torch.Tensor(self.batch[idx][2])
+        msk_tok = torch.Tensor(self.batch[idx][3])
+        msk_pos = torch.Tensor(self.batch[idx][4])
+        label = torch.Tensor([self.batch[idx][5]])
 
-        ids, seg, msk_pos = ids.type(torch.IntTensor), seg.type(torch.IntTensor), msk_pos.type(torch.int64)
-
+        ids, seg, msk_pos = ids.type(torch.LongTensor), seg.type(torch.LongTensor), msk_pos.type(torch.int64)
+        mask = mask.type(torch.FloatTensor)
         msk_tok = msk_tok.type(torch.LongTensor)
         label = label.type(torch.LongTensor)
 
-        return ids, seg, msk_pos, msk_tok, label
-
-class test_DNA_Data(Dataset):
-    """Barcode Dataset"""
-
-    def __init__(self, file_path, k_mer=4, max_len=512):
-        pablo_dataset = PabloDNADataset(file_path)
-        # for removing X,R,Y letters from data
-        pablo_dataset.change_RXY2N("nucleotides")
-        self.dna_nucleotides = list(pablo_dataset.df["nucleotides"].values)
-        self.species = list(pablo_dataset.df["species_name"].values)
-        word_list = SampleDNAData.get_all_kmers(k_mer)
-
-        word_dict = {'[PAD]': 0, '[CLS]': 1, '[SEP]': 2, '[MASK]': 3}
-        for i, w in enumerate(word_list):
-            word_dict[w] = i + 4
-            number_dict = {i: w for i, w in enumerate(word_dict)}  # TODO: try move this out from the loop.
-
-
-        self.word_dict = word_dict
-        self.number_dict = number_dict
-        self.vocab_size = len(word_dict)
-        self.max_len = max_len
-
-        self.IDS = []
-        self.SEGMENTS = []
-        self.SPECIES = []
-
-        for seq, species in zip(self.dna_nucleotides, self.species):
-            if len(seq) > (self.max_len - 2):
-                seq = seq[:self.max_len - 2]
-            tokens = tokenizer(seq, word_dict, 4, stride=1)
-            input_ids = [word_dict['[CLS]']] + tokens + [word_dict['[SEP]']]
-            segment_ids = [0] * (1 + len(tokens) ) + [1] * (1)
-            masked_tokens, masked_pos = [], [] # No mask for testing
-
-            # Zero Paddings
-            n_pad = max_len - len(input_ids)
-            if n_pad > 0:
-                input_ids.extend([0] * n_pad)
-                segment_ids.extend([0] * n_pad)
-
-            self.IDS.append(input_ids)
-            self.SEGMENTS.append(segment_ids)
-            self.SPECIES.append(species)
-
-    def __len__(self):
-        return len(self.dna_nucleotides)
-
-    def __getitem__(self, idx):
-        ids = torch.Tensor(self.IDS[idx])
-        seg = torch.Tensor(self.SEGMENTS[idx])
-        # msk_pos = torch.Tensor([])
-        label = self.SPECIES[idx]
-
-        ids, seg = ids.type(torch.IntTensor), seg.type(torch.IntTensor) # [msk_pos.type(torch.int64)]
-
-        return  {'input':[ids, seg], 'label':label}
+        return ids, seg, mask, msk_pos, msk_tok, label
