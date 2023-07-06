@@ -1,19 +1,17 @@
 # Bumblebee
 
-A pre-trained representation from a transformers model for inference on insect [DNA barcoding data](https://vault.cs.uwaterloo.ca/s/YojSrfn7n2iLfa9)
+A pre-trained representation from a transformers model for inference on insect DNA barcoding data.
 
 *Note*: If you have been here before, you will note that the code is not a mess anymore. Shoutout to Niousha and Monireh. We do not need Hugging-Face as the entire architecture was implemented from scratch by them
 
-
+0. Download the [data](https://vault.cs.uwaterloo.ca/s/YojSrfn7n2iLfa9)
 1. Make sure you have all the required libraries before running (remove the --no-index flags if you are not training on CC)
 
 ```
 ./DNABERT.sh
 ```
 
-Our new vocabulary consists of {A, C, G, T, N}.
-
-Progress on the Bioscan transformers project so far:
+Progress on the Bioscan transformers projects so far:
 
 1. Describe the original data [1.5M barcodes dataset](https://www.nature.com/articles/s41597-019-0320-2#Sec22) and report them.
 
@@ -68,8 +66,8 @@ Progress on the Bioscan transformers project so far:
 **NOTE**: There are 119 species for which at least one of its sequences is duplicated and labeled with another species' name. All the sequences in those species are in the pre-processing dataset.
 
 3. Split the dataset into:
-    * **Supervised Seen:** Dataset for evaluating the capacity of the model to learn the species label. This will be split into training (70%), testing(20%) and validation (10%). 
-    * **Unseen**: Dataset for evaluating the quality of the learned embeddings.
+    * **Supervised Seen:** Dataset for evaluating the capacity of the model to learn the species label, contains 50 barcodes for all the species with at least 50 specimens. This will be split into training (70%), testing(20%), and validation (10%). 
+    * **Unseen**: Dataset for evaluating the quality of the learned embeddings (50 barcodes from 100 selected species).
     * **Unsupervised Pretraining:** Dataset containing the rest of the sequences, here we will have sequences with incomplete taxonomic annotations or sequences in the problematic species. 
 
 4. Script to test the 1D-CNN architecture `1D_CNN_supervised.py` for supervised and `1D_CNN_metric.py` for testing the metric learning on the unseen dataset.
