@@ -8,12 +8,12 @@ A pre-trained representation from a transformers model for inference on insect D
 1. Make sure you have all the required libraries before running (remove the --no-index flags if you are not training on CC)
 
 ```
-./DNABERT.sh
+pip install -r requirements.txt
 ```
 
 Progress on the Bioscan transformers projects so far:
 
-1. Describe the original data [1.5M barcodes dataset](https://www.nature.com/articles/s41597-019-0320-2#Sec22) and report them.
+1. Describe the original data [1.5M barcodes dataset](https://www.nature.com/articles/s41597-019-0320-2#Sec22) and report them.  
 
 | phylum_name     |      processid |       sampleid |   bin_uri |   class_name |   order_name |   family_name |   genus_name |   species_name |    nucleotides |
 |:----------------|---------------:|---------------:|----------:|-------------:|-------------:|--------------:|-------------:|---------------:|---------------:|
@@ -66,7 +66,7 @@ Progress on the Bioscan transformers projects so far:
 **NOTE**: There are 119 species for which at least one of its sequences is duplicated and labeled with another species' name. All the sequences in those species are in the pre-processing dataset.
 
 3. Split the dataset into:
-    * **Supervised Seen:** Dataset for evaluating the capacity of the model to learn the species label, contains 50 barcodes for all the species with at least 50 specimens. This will be split into training (70%), testing(20%), and validation (10%). 
+    * **Supervised Seen:** Dataset for evaluating the capacity of the model to learn the species label, contains 50 barcodes for all the species with at least 50 specimens. This will be split into training (70%), testing(20%), and validation (10%). (1390 species and 50 barcodes per species)
     * **Unseen**: Dataset for evaluating the quality of the learned embeddings (50 barcodes from 100 selected species).
     * **Unsupervised Pretraining:** Dataset containing the rest of the sequences, here we will have sequences with incomplete taxonomic annotations or sequences in the problematic species. 
 
@@ -85,12 +85,43 @@ Best Metric:  manhattan
 Accuracy 1-kNN:  0.8702000000000004
 ```
 
-5. Script to train the Bert-like architecture as an MLM. 
+5. Script to test the BERT-Like architecture for supervised and metric learning. `BERT_supervised.py` for supervised and `BERT_metric.py` for testing the metric learning on the unseen dataset.
 
-6. Evaluate the MLM for metric learning.
+```console
+config = {
+    "d_model": 768,
+    "n_heads": 12,
+    "n_layers": 12,
+    "max_len": 512
+
+}
+
+-----------------------------------------------------------
+| end of epoch  19 | time: 131.13s | valid accuracy    0.965 
+-----------------------------------------------------------
+```
+
+```
+Using GAP
+[0.9895999999999998, 0.8664000000000003, 0.9899999999999998]
+Best Metric:  minkowski Accuracy:  0.9899999999999998
+
+Using CLS token
+[0.9877999999999999, 0.8834000000000001, 0.9873999999999999]
+Best Metric:  manhattan Accuracy:  0.9877999999999999
+
+```
+![BERT_Embedding](Figures/BERT_CLS_embeddings.png)
 
 
-7. Script to test the BERT-Like architecture for supervised and metric learning.
+6. Script to train the Bert-like architecture as an MLM. 
+    + `MLM_train.py` contains vainilla code with non-overlapping kmers and only the masked component of the loss   
 
-8. Script to test the CCT architecture for supervised and metric learning.
+    + `train.py` contains **Hugging-Face model** with the following characteristics:
+            - overlapping k-mers  
+            - Two components of the loss.  
+            - Multi-GPU support   
+        
 
+7. Evaluate the MLM for metric learning.
+** To-Do**

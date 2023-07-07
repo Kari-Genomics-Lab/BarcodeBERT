@@ -112,10 +112,6 @@ def cls_test(args, model, test_dataloader, device):
     best_metric = metrics[scores.index(max(scores))]
 
 
-
-
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type=str, default="unseen.tsv",
