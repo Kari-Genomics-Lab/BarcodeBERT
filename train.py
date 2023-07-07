@@ -40,12 +40,13 @@ def train(args, dataloader, device, model, optimizer):
     sys.stdout.write("Training is started:\n")
 
     if args['activate_wandb']:
-        wandb.init(project="BioScan_transformer", name="Init_run")
+        wandb.init(project="BioScan_transformer", name=args['name_of_run'])
 
     steps_per_epoch = len(dataloader)
+
     pbar_epoch_level = tqdm(range(continue_epoch, training_epoch + 1))
     for epoch in pbar_epoch_level:
-        pbar_epoch_level.set_description("Epoch: " + str(epoch))
+        # pbar_epoch_level.set_description("Epoch: " + str(epoch))
         epoch_loss = 0
         dataloader.sampler.set_epoch(epoch)
         pbar_iter_level = tqdm(total=steps_per_epoch)
@@ -80,7 +81,10 @@ def train(args, dataloader, device, model, optimizer):
 
             loss.backward()
             optimizer.step()
+            pbar_iter_level.set_description(str(step + epoch * steps_per_epoch))
             if args['activate_wandb']:
+
+                # print()
                 wandb.log({"loss": loss.item()}, step=step + epoch * steps_per_epoch)
 
                 wandb.run.summary["epoch"] = epoch + 1
@@ -91,20 +95,22 @@ def train(args, dataloader, device, model, optimizer):
 
                 wandb.log({}, commit=True)
 
-            pbar_iter_level.set_description("Loss: " + str(loss.item()))
+            # pbar_iter_level.set_description("Loss: " + str(loss.item()))
             pbar_iter_level.update(1)
 
 
         epoch_loss_list.append(epoch_loss)
 
-        wandb.log({'epoch': epoch, 'epoch_loss': epoch_loss})
-        wandb.log({}, commit=True)
+        if args['activate_wandb']:
+            wandb.log({'epoch': epoch, 'epoch_loss': epoch_loss})
+            wandb.log({}, commit=True)
 
         # every epoch save the checkpoints and save the loss in a list
         if epoch % 1 == 0:
+            os.makedirs(saving_path, exist_ok=True)
             sys.stdout.write(f"Epoch {epoch} in device {device}: Loss is {epoch_loss}\n")
-            torch.save(model.state_dict(), saving_path + "model_" + str(epoch) + '.pth')
-            torch.save(optimizer.state_dict(), saving_path + "optimizer_" + str(epoch) + '.pth')
+            torch.save(model.state_dict(), saving_path + "last_model" + '.pth')
+            torch.save(optimizer.state_dict(), saving_path + "last_optimizer" + '.pth')
 
             a_file = open(saving_path + f"loss_{device}.pkl", "wb")
             pickle.dump(epoch_loss_list, a_file)
@@ -159,7 +165,7 @@ def main(rank: int, world_size: int, args):
 
     sys.stdout.write("Model is loaded.\n")
 
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.0005, betas=(0.9, 0.98), eps=1e-06, weight_decay=1e-05)
 
     # dataloader = DataLoader(dataset, batch_size=args['batch_size'], pin_memory=False, shuffle=False,
     #                         sampler=DistributedSampler(dataset))
@@ -179,7 +185,8 @@ if __name__ == '__main__':
     parser.add_argument('--max_len', action='store', type=int, default=512)
     parser.add_argument('--batch_size', action='store', type=int, default=8)
     parser.add_argument('--loss_weight', action='store', type=float, default=0.5)
-    parser.add_argument('--epoch', type=int, default=10)
+    parser.add_argument('--epoch', type=int, default=100)
+    parser.add_argument('--name_of_run', type=str, required=False)
     parser.add_argument('--activate_wandb', default=False, action='store_true')
 
     args = vars(parser.parse_args())
