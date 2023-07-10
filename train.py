@@ -46,7 +46,7 @@ def train(args, dataloader, device, model, optimizer):
 
     pbar_epoch_level = tqdm(range(continue_epoch, training_epoch + 1))
     for epoch in pbar_epoch_level:
-        # pbar_epoch_level.set_description("Epoch: " + str(epoch))
+        pbar_epoch_level.set_description("Epoch: " + str(epoch))
         epoch_loss = 0
         dataloader.sampler.set_epoch(epoch)
         pbar_iter_level = tqdm(total=steps_per_epoch)
@@ -81,7 +81,6 @@ def train(args, dataloader, device, model, optimizer):
 
             loss.backward()
             optimizer.step()
-            pbar_iter_level.set_description(str(step + epoch * steps_per_epoch))
             if args['activate_wandb']:
 
                 # print()
@@ -95,7 +94,7 @@ def train(args, dataloader, device, model, optimizer):
 
                 wandb.log({}, commit=True)
 
-            # pbar_iter_level.set_description("Loss: " + str(loss.item()))
+            pbar_iter_level.set_description("Loss: " + str(loss.item()))
             pbar_iter_level.update(1)
 
 
@@ -184,11 +183,11 @@ if __name__ == '__main__':
     parser.add_argument('--max_mask_count', action='store', type=int, default=80)
     parser.add_argument('--max_len', action='store', type=int, default=512)
     parser.add_argument('--batch_size', action='store', type=int, default=8)
-    parser.add_argument('--lr', action='store', type=int, default=0.0005)
-    parser.add_argument('--betas_a', action='store', type=int, default=0.9)
-    parser.add_argument('--betas_b', action='store', type=int, default=0.98)
-    parser.add_argument('--eps', action='store', type=int, default=1e-06)
-    parser.add_argument('--weight_decay', action='store', type=int, default=1e-05)
+    parser.add_argument('--lr', action='store', type=float, default=0.0005)
+    parser.add_argument('--betas_a', action='store', type=float, default=0.9)
+    parser.add_argument('--betas_b', action='store', type=float, default=0.98)
+    parser.add_argument('--eps', action='store', type=float, default=1e-06)
+    parser.add_argument('--weight_decay', action='store', type=float, default=1e-05)
     parser.add_argument('--loss_weight', action='store', type=float, default=0.5)
     parser.add_argument('--epoch', type=int, default=100)
     parser.add_argument('--name_of_run', type=str, required=False)
