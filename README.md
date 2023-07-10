@@ -115,13 +115,20 @@ Best Metric:  manhattan Accuracy:  0.9877999999999999
 
 
 6. Script to train the Bert-like architecture as an MLM. 
-    + `MLM_train.py` contains vainilla code with non-overlapping kmers and only the masked component of the loss   
+    + `MLM_train.py` contains vainilla code with non-overlapping kmers and only the masked component of the loss. I am using a lr scheduler, but the loss drops to zero after the first step of the scheduler. 
+
+    ```
+    GAP
+    [0.8103999999999998, 0.5618000000000002, 0.8084]
+    Best Metric:  manhattan Accuracy:  0.810399999999999
+    ```
+
+    ![Vainilla_Pre_training_BERT_Embedding](Figures/Pre_Training_BERT_GAP_embeddings.png)
+
+    ![Vainilla_Pre_training_BERT_Loss](Figures/Pre_Training_Loss_MLM.png)
 
     + `train.py` contains **Hugging-Face model** with the following characteristics:
             - overlapping k-mers  
             - Two components of the loss.  
             - Multi-GPU support   
         
-
-7. Evaluate the MLM for metric learning.
-** To-Do**
