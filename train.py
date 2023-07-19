@@ -16,7 +16,7 @@ from util.dataset import SampleDNAData
 from tqdm import tqdm
 import wandb
 
-def train(args, dataloader, device, model, optimizer):
+def train(args, dataloader, device, model, optimizer, scheduler):
     # start training
     criterion = nn.CrossEntropyLoss()
 
@@ -24,9 +24,9 @@ def train(args, dataloader, device, model, optimizer):
     training_epoch = args['epoch']
     continue_epoch = 0
 
-    saving_path = "model_checkpoints/"
-    if not os.path.isdir(saving_path):
-        os.mkdir(saving_path)
+    saving_path = os.path.join("model_checkpoints", args['name_of_dataset'], args['name_of_exp'])
+
+    os.makedirs(saving_path, exist_ok=True)
 
     if args['checkpoint']:
         continue_epoch = 0
@@ -81,6 +81,7 @@ def train(args, dataloader, device, model, optimizer):
 
             loss.backward()
             optimizer.step()
+            scheduler.step()
             if args['activate_wandb']:
 
                 # print()
@@ -137,6 +138,8 @@ def main(rank: int, world_size: int, args):
     ddp_setup(rank, world_size)
 
     sys.stdout.write("Loading the dataset is started.\n")
+    args['input_path'] = os.path.join(args['input_dir'], args['name_of_dataset'] + ".tsv")
+
     dataset = SampleDNAData(file_path=args['input_path'], k_mer=args['k_mer'], max_mask_count=args['max_mask_count'],
                             max_len=args['max_len'])
 
@@ -170,14 +173,21 @@ def main(rank: int, world_size: int, args):
     #                         sampler=DistributedSampler(dataset))
     dataloader = prepare(dataset, rank, world_size=world_size, batch_size=args['batch_size'])
 
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=args['lr'],
+                                                    steps_per_epoch=len(dataloader),
+                                                    epochs=args['epoch'], div_factor=10)
+
     model = DDP(model, device_ids=[rank], output_device=rank, find_unused_parameters=False)
-    train(args, dataloader, rank, model, optimizer)
+    train(args, dataloader, rank, model, optimizer, scheduler)
     destroy_process_group()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_path', action='store', type=str)
+    parser.add_argument('--input_dir', action='store', type=str)
+    parser.add_argument('--name_of_dataset', action='store', type=str)
+    parser.add_argument('--name_of_exp', action='store', type=str)
+
     parser.add_argument('--checkpoint', action='store', type=bool, default=False)
     parser.add_argument('--k_mer', action='store', type=int, default=4)
     parser.add_argument('--max_mask_count', action='store', type=int, default=80)
@@ -195,6 +205,9 @@ if __name__ == '__main__':
 
 
     args = vars(parser.parse_args())
+
+
+
 
     sys.stdout.write("\nTraining Parameters:\n")
     for key in args:
