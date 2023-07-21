@@ -16,6 +16,7 @@ from util.dataset import SampleDNAData
 from tqdm import tqdm
 import wandb
 
+
 def train(args, dataloader, device, model, optimizer, scheduler):
     # start training
     criterion = nn.CrossEntropyLoss()
@@ -81,23 +82,19 @@ def train(args, dataloader, device, model, optimizer, scheduler):
 
             loss.backward()
             optimizer.step()
-            scheduler.step()
+            if args['activate_lr_scheduler']:
+                scheduler.step()
             if args['activate_wandb']:
 
                 # print()
                 wandb.log({"loss": loss.item()}, step=step + epoch * steps_per_epoch)
 
                 wandb.run.summary["epoch"] = epoch + 1
-                # global_step = step + epoch * steps_per_epoch
-
-                # if step == 0:
-                #     wandb.log({f"custom_plot/xaxis": "epoch", "custom_plot/yaxis": "metric_value"}, step=global_step)
 
                 wandb.log({}, commit=True)
 
             pbar_iter_level.set_description("Loss: " + str(loss.item()))
             pbar_iter_level.update(1)
-
 
         epoch_loss_list.append(epoch_loss)
 
@@ -145,15 +142,6 @@ def main(rank: int, world_size: int, args):
 
     sys.stdout.write("loading the model.\n")
     vocab_size = 5 ** args['k_mer'] + 4  # '[PAD]', '[CLS]', '[SEP]',  '[MASK]'
-    # config = {
-    #     "d_model": 768,
-    #     "n_heads": 12,
-    #     "n_layers": 12,
-    #     "max_len": 512
-    # }
-
-    # model = VerySimpleModel(vocab_size, config["d_model"], args['max_len'], 2, config["n_layers"], 32, 32,
-    #                     config["n_heads"], device=rank).to(rank)
 
     configuration = BertConfig(vocab_size=vocab_size)
 
@@ -161,21 +149,18 @@ def main(rank: int, world_size: int, args):
 
     model = BertForPreTraining(configuration).to(rank)
 
-    # model = BERT(vocab_size, config["d_model"], args['max_len'], 2, config["n_layers"], 32, 32,
-    #              config["n_heads"], device=rank)
-    # model = SampleModel(vocab_size).to(rank)
-
     sys.stdout.write("Model is loaded.\n")
 
     optimizer = optim.Adam(model.parameters(), lr=args['lr'], betas=(args['betas_a'], args['betas_b']), eps=args['eps'], weight_decay=args['weight_decay'])
 
-    # dataloader = DataLoader(dataset, batch_size=args['batch_size'], pin_memory=False, shuffle=False,
-    #                         sampler=DistributedSampler(dataset))
     dataloader = prepare(dataset, rank, world_size=world_size, batch_size=args['batch_size'])
 
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=args['lr'],
-                                                    steps_per_epoch=len(dataloader),
-                                                    epochs=args['epoch'], div_factor=10)
+    if args['activate_lr_scheduler']:
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=args['lr'],
+                                                        steps_per_epoch=len(dataloader),
+                                                        epochs=args['epoch'], div_factor=args['div_factor'])
+    else:
+        scheduler = None
 
     model = DDP(model, device_ids=[rank], output_device=rank, find_unused_parameters=False)
     train(args, dataloader, rank, model, optimizer, scheduler)
@@ -199,15 +184,13 @@ if __name__ == '__main__':
     parser.add_argument('--eps', action='store', type=float, default=1e-06)
     parser.add_argument('--weight_decay', action='store', type=float, default=1e-05)
     parser.add_argument('--loss_weight', action='store', type=float, default=0.5)
-    parser.add_argument('--epoch', type=int, default=100)
+    parser.add_argument('--epoch', type=int, default=50)
     parser.add_argument('--name_of_run', type=str, required=False)
     parser.add_argument('--activate_wandb', default=False, action='store_true')
-
+    parser.add_argument('--activate_lr_scheduler', default=False, action='store_true')
+    parser.add_argument('--div_factor', default=10, required=False, type=float)
 
     args = vars(parser.parse_args())
-
-
-
 
     sys.stdout.write("\nTraining Parameters:\n")
     for key in args:
