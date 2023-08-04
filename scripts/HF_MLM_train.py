@@ -1,3 +1,5 @@
+import os
+import sys
 import time
 from itertools import product
 
@@ -17,7 +19,8 @@ import math
 
 import matplotlib.pyplot as plt
 
-random.seed(10)
+from transformers import BertForMaskedLM
+from transformers import BertConfig
 
 
 """# Model"""
@@ -201,7 +204,7 @@ tokenizer = kmer_tokenizer(k, stride=k, padding=True, max_len=max_len)  #Non ove
 
 
 kmer_iter = ([''.join(kmer)] for kmer in  product('ACGT',repeat=k))
-vocab = build_vocab_from_iterator(kmer_iter, specials=["<MASK>","<CLS>","<UNK>", "<SEP>"])
+vocab = build_vocab_from_iterator(kmer_iter, specials=["<MASK>","<CLS>","<UNK>"])
 vocab.set_default_index(vocab["<UNK>"])
 
 
@@ -233,15 +236,19 @@ config = {
 }
     
 print("Initializing the model . . .")
-model = BERT_MLM(vocab_size, config["d_model"], max_len, config["n_layers"], 32, 32,
-             config["n_heads"], device=device)
+configuration = BertConfig(vocab_size=vocab_size)
+
+# Initializing a model (with random weights) from the bert-base-uncased style configuration
+model = BertForMaskedLM(configuration)
+model.train()
+model.to(device)
 print("The model has been succesfully initialized . . .")
 
-model.train()
+
 epochs = 1
 
  
-criterion = nn.CrossEntropyLoss()
+#criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 scheduler = optim.lr_scheduler.LinearLR(optimizer, start_factor=1e-2, total_iters=5)
 
@@ -264,15 +271,15 @@ for epoch in range(10):
         #Build the masking on the fly every time something different
         masked_input = batch.clone()
         random_mask = torch.rand(masked_input.shape).to(device) # I can only do this for non-overlapping
-        random_mask = (random_mask < 0.25) * (masked_input != 2) #Cannot mask the [<UNK>] token
+        random_mask = (random_mask < 0.5) * (masked_input != 2) #Cannot mask the [<UNK>] token
         mask_idx=(random_mask.flatten() == True).nonzero().view(-1)
         masked_input = masked_input.flatten()
         masked_input[mask_idx] = 1
         masked_input = masked_input.view(batch.size())
 
-        out = model(batch)
-        loss = criterion(out.view(-1,4**k+3), batch.view(-1))
-        
+        out = model(masked_input, labels=batch)
+        #loss = criterion(out.view(-1,4**k+3), batch.view(-1))
+        loss = out.loss
         total_loss += loss
         loss.backward()
         optimizer.step()

@@ -61,7 +61,6 @@ class pad_sequence(object):
 
 
 """# Model"""
-"""# Model"""
 class Embedding(nn.Module):
     def __init__(self, vocab_size, d_model, maxlen, device):
         super(Embedding, self).__init__()

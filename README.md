@@ -111,7 +111,7 @@ Using CLS token
 Best Metric:  manhattan Accuracy:  0.9877999999999999
 
 ```
-![BERT_Embedding](Figures/BERT_CLS_embeddings.png)
+![BERT_Embedding](Figures/Supervised_BERT_GAP_embeddings.png)
 
 
 6. Script to train the Bert-like architecture as an MLM. 
@@ -126,6 +126,18 @@ Best Metric:  manhattan Accuracy:  0.9877999999999999
     ![Vainilla_Pre_training_BERT_Embedding](Figures/Pre_Training_BERT_GAP_embeddings.png)
 
     ![Vainilla_Pre_training_BERT_Loss](Figures/Pre_Training_Loss_MLM.png)
+
+    + `HF_MLM_train.py` contains Hugging Face implementation of the model and code with non-overlapping kmers. Only the masked component of the loss is considered. I am using a lr scheduler and a 0.5 masking ration this time, it fixed the memorization probelm.
+
+    ```
+    GAP
+    [0.9115999999999999, 0.6586, 0.9122]
+    Best Metric:  minkowski Accuracy:  0.9122
+    ```
+
+    ![Vainilla_Pre_training_BERT_Embedding](Figures/0.5_Mask_Pre_Training_BERT_GAP_embeddings.png)
+
+    ![Vainilla_Pre_training_BERT_Loss](Figures/0.5_Mask_Pre_Training_Loss.png)
 
     + `train.py` contains **Hugging-Face model** with the following characteristics:
             - overlapping k-mers  
