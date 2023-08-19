@@ -90,7 +90,7 @@ def train(args, dataloader, device, model, optimizer, scheduler):
     training_epoch = 100
     continue_epoch = 0
 
-    saving_path = "model_checkpoints/"
+    saving_path = "../model_checkpoints/"
     if not os.path.isdir(saving_path):
         os.mkdir(saving_path)
 

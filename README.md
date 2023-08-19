@@ -143,4 +143,18 @@ Best Metric:  manhattan Accuracy:  0.9877999999999999
             - overlapping k-mers  
             - Two components of the loss.  
             - Multi-GPU support   
+
         
+7. Script to train the Bert-like architecture as an MLM. 
+    + `MGPU_MLM_train.py` contains vanilla code with non-overlapping kmers and only the masked component of the loss. Comparing to 6 I am using a smaller weight decay for AdamW, and train the network for 44 epochs.
+    ```
+    GAP
+    [0.9916000000000001, 0.992, 0.9916000000000001]
+    Best Metric:  cosine Accuracy:  0.992
+    ```
+
+    ![Vainilla_Pre_training_BERT_Embedding](Figures/0.7_Mask_Pre_Training_BERT_GAP_embeddings.png)
+
+    ![Vainilla_Pre_training_BERT_Loss](Figures/0.7_Mask_Pre_Training_Loss.png)
+
+
