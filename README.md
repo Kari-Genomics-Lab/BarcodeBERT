@@ -26,5 +26,12 @@ python train.py --input_dir data/for_training --name_of_proj Bioscan-transformer
 Note: If you are using the solar for multi-GPU training, you may want to add `NCCL_P2P_LEVEL=NVL` in front of your command to enable P2P during the training.
 
 # Test the pre-training
-`TODO`
+For model testing, you can use the following command.
+```shell
+python test.py --input_dir {path to the data folder} --name_of_dataset {name of the dataset without the suffix} --checkpoint_path {path to the model with .pth suffix}
+```
+There are some other arguments with default values you can set, but please make sure they match the training arguments.
+```shell
+python test.py --input_dir {path to the data folder} --name_of_dataset {name of the dataset without the suffix} --checkpoint_path {path to the model with .pth suffix} --k_mer {default: 4} --max_mask_count {default: 80} -- max_len {default: 512} --batch_size {default: 8} --loss_weight {default: 0.5}
+```
 
