@@ -15,20 +15,18 @@ from torch.utils.data.distributed import DistributedSampler
 from util.dataset import SampleDNAData
 from tqdm import tqdm
 import wandb
+import sys
+print("User Current Version:-", sys.version)
 
-
-def train(args, dataloader, device, model, optimizer, scheduler):
+def train(args, dataloader, device, model, optimizer, scheduler, saving_path):
     # start training
+    sys.stdout.write("Enter train func:\n")
     criterion = nn.CrossEntropyLoss()
 
     epoch_loss_list = []
     training_epoch = args['epoch']
     continue_epoch = 0
-
-    saving_path = os.path.join("model_checkpoints", args['name_of_dataset'], args['name_of_exp'])
-
-    os.makedirs(saving_path, exist_ok=True)
-
+    sys.stdout.write("Before optional loading:\n")
     if args['checkpoint']:
         continue_epoch = 0
         model.load_state_dict(torch.load(saving_path + f'model_{continue_epoch}.pth'))
@@ -41,7 +39,7 @@ def train(args, dataloader, device, model, optimizer, scheduler):
     sys.stdout.write("Training is started:\n")
 
     if args['activate_wandb']:
-        wandb.init(project="BioScan_transformer", name=args['name_of_run'])
+        wandb.init(project=args['name_of_proj'], name=args['name_of_run'])
 
     steps_per_epoch = len(dataloader)
 
@@ -89,8 +87,6 @@ def train(args, dataloader, device, model, optimizer, scheduler):
                 # print()
                 wandb.log({"loss": loss.item()}, step=step + epoch * steps_per_epoch)
 
-                wandb.run.summary["epoch"] = epoch + 1
-
                 wandb.log({}, commit=True)
 
             pbar_iter_level.set_description("Loss: " + str(loss.item()))
@@ -131,7 +127,8 @@ def prepare(dataset, rank, world_size, batch_size=32, pin_memory=False, num_work
     return dataloader
 
 
-def main(rank: int, world_size: int, args):
+def main(rank: int, world_size: int, args, saving_path):
+    torch.manual_seed(42)
     ddp_setup(rank, world_size)
 
     sys.stdout.write("Loading the dataset is started.\n")
@@ -142,28 +139,34 @@ def main(rank: int, world_size: int, args):
 
     sys.stdout.write("loading the model.\n")
     vocab_size = 5 ** args['k_mer'] + 4  # '[PAD]', '[CLS]', '[SEP]',  '[MASK]'
-
     configuration = BertConfig(vocab_size=vocab_size)
 
     # Initializing a model (with random weights) from the bert-base-uncased style configuration
-
-    model = BertForPreTraining(configuration).to(rank)
+    device = torch.device('cuda', rank)
+    model = BertForPreTraining(configuration).to(device)
 
     sys.stdout.write("Model is loaded.\n")
 
     optimizer = optim.Adam(model.parameters(), lr=args['lr'], betas=(args['betas_a'], args['betas_b']), eps=args['eps'], weight_decay=args['weight_decay'])
 
     dataloader = prepare(dataset, rank, world_size=world_size, batch_size=args['batch_size'])
-
+    sys.stdout.write("optim and dataloader is ready\n")
     if args['activate_lr_scheduler']:
         scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=args['lr'],
                                                         steps_per_epoch=len(dataloader),
                                                         epochs=args['epoch'], div_factor=args['div_factor'])
+        sys.stdout.write("scheduler is ready\n")
     else:
         scheduler = None
 
-    model = DDP(model, device_ids=[rank], output_device=rank, find_unused_parameters=False)
-    train(args, dataloader, rank, model, optimizer, scheduler)
+    model = DDP(model, device_ids=[rank], output_device=rank)
+    # model = DDP(model, device_ids=[rank], output_device=rank, find_unused_parameters=False)
+
+    sys.stdout.write("DDP is ready\n")
+
+    sys.stdout.write("Model is ready.\n")
+
+    train(args, dataloader, rank, model, optimizer, scheduler, saving_path)
     destroy_process_group()
 
 
@@ -171,6 +174,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', action='store', type=str)
     parser.add_argument('--name_of_dataset', action='store', type=str)
+    parser.add_argument('--name_of_proj', action='store', type=str)
     parser.add_argument('--name_of_exp', action='store', type=str)
 
     parser.add_argument('--checkpoint', action='store', type=bool, default=False)
@@ -197,5 +201,7 @@ if __name__ == '__main__':
         sys.stdout.write(f'{key} \t -> {args[key]}\n')
 
     world_size = torch.cuda.device_count()
+    saving_path = os.path.join("model_checkpoints", args['name_of_dataset'], args['name_of_exp'])
 
-    mp.spawn(main, args=(world_size, args), nprocs=world_size)
+    os.makedirs(saving_path, exist_ok=True)
+    mp.spawn(main, args=(world_size, args, saving_path), nprocs=world_size, join=True)

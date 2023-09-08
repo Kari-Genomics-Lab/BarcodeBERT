@@ -1,0 +1,5 @@
+numpy
+scipy
+sklearn
+tensorflow
+biopython==1.79
