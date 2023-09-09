@@ -31,13 +31,11 @@ def dna_barcode_to_one_hot(args, barcodes):
 def load_data(args):
     seen_train_df = pd.read_csv(os.path.join(args.input_dir, args.taxnomy_level + "_seen_train.tsv") ,sep = '\t')
     
-    seen_test_df = pd.read_csv(os.path.join(args.input_dir, args.taxnomy_level + "_seen_test.tsv") ,sep = '\t')
-    easy_unseen_test_df = pd.read_csv(os.path.join(args.input_dir, args.taxnomy_level + "_easy_unseen_test.tsv") ,sep = '\t')
-    hard_unseen_test_df = pd.read_csv(os.path.join(args.input_dir, args.taxnomy_level + "_hard_unseen_test.tsv") ,sep = '\t')
     
     x_seen_train = seen_train_df['nucraw'].values
     x_seen_train = np.array([s.upper() for s in x_seen_train])
     y_seen_train = seen_train_df[args.taxnomy_level].values
+    
     
     number_of_classes = len(np.unique(y_seen_train))
     
