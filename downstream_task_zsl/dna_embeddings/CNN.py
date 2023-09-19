@@ -121,7 +121,7 @@ def train_and_eval(args, model, trainloader, testloader, device, lr=0.005, n_epo
     if args.save_model:
         current_datetime = datetime.datetime.now()
         formatted_datetime = current_datetime.strftime("%Y_%m_%d_%H_%M_%S")
-        save_dir = os.path.join(args.model_output_dir, args.taxnomy_level, formatted_datetime)
+        save_dir = os.path.join(args.model_output_dir, args.taxonomy_level, formatted_datetime)
         os.makedirs(save_dir, exist_ok=True)
         save_path = os.path.join(save_dir, 'model.pth')
         torch.save(model.state_dict(), save_path)

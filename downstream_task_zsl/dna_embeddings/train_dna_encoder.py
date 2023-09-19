@@ -29,12 +29,12 @@ def dna_barcode_to_one_hot(args, barcodes):
     
 
 def load_data(args):
-    seen_train_df = pd.read_csv(os.path.join(args.input_dir, args.taxnomy_level + "_seen_train.tsv") ,sep = '\t')
+    seen_train_df = pd.read_csv(os.path.join(args.input_dir, args.taxonomy_level + "_seen_train.tsv"), sep ='\t')
     
     
     x_seen_train = seen_train_df['nucraw'].values
     x_seen_train = np.array([s.upper() for s in x_seen_train])
-    y_seen_train = seen_train_df[args.taxnomy_level].values
+    y_seen_train = seen_train_df[args.taxonomy_level].values
     
     
     number_of_classes = len(np.unique(y_seen_train))
@@ -80,20 +80,20 @@ def get_embedding(model, all_X):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', type=str, default="../data/bioscan_1m", help="path to the directory that contains the split data.")
-    parser.add_argument('--model_output_dir', type=str, default="../ckpt/dna_encoder")
+    parser.add_argument('--model_output_dir', type=str, default="../ckpt/dna_encoder_768_dim")
     parser.add_argument('--taxnomy_level', type=str, default="genus")
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--learning_rate', type=float, default=0.005)
     parser.add_argument('--max_epochs', type=int, default=12)
     parser.add_argument('--pad_to', type=int, default=936)
     # 936
-    parser.add_argument('--output_dir', type=str, default="", help="The path used to store the checkpoint.")
+    parser.add_argument('--embedding_dim', type=int, default=768)
     parser.add_argument('--number_of_workers', type=int, default=4)
     parser.add_argument('--save_model', action='store_true')
     args = parser.parse_args()
 
     X_train, X_test, y_train, y_test, total_number_of_classes = load_data(args)
     trainloader, testloader = construct_dataloader(X_train, X_test, y_train, y_test, args.batch_size)
-    model = Model(1, total_number_of_classes, dim=2640).to(device)
+    model = Model(1, total_number_of_classes, dim=2640, embedding_dim=768).to(device)
     train_and_eval(args, model, trainloader, testloader, device=device, n_epoch=args.max_epochs, lr=args.learning_rate, num_classes=total_number_of_classes)
     

@@ -1,3 +1,4 @@
+import json
 import math
 import random
 
@@ -6,155 +7,157 @@ import scipy.io as sio
 from scipy.linalg import eigh
 import os
 from sklearn.model_selection import train_test_split
+import pandas as pd
+import h5py
+import numpy as np
+from tqdm import tqdm
 
 """Data loading part"""
 
 
-class data_loader(object):
-    def __init__(self, datapath, dataset, side_info='original', tuning=False, alignment=True):
-
-        print("The current working directory is")
-        print(os.getcwd())
-        self.datapath = datapath  # '../data/'
-        self.dataset = dataset
-        self.side_info_source = side_info
-        self.tuning = tuning
-        self.alignment = alignment
-
-        self.read_matdata()
-
-    def read_matdata(self):
-        path = os.path.join(self.datapath, self.dataset, 'res101.mat')
-        data_mat = sio.loadmat(path)
-        self.features = data_mat['features'].T
-        print('self.feature: ')
-
-        self.labels = data_mat['labels'].ravel() - 1
-        path = os.path.join(self.datapath, self.dataset, 'att_splits.mat')
-        splits_mat = sio.loadmat(path)
-
-        self.trainval_loc = splits_mat['trainval_loc'].ravel() - 1
-        self.train_loc = splits_mat['train_loc'].ravel() - 1
-        self.val_unseen_loc = splits_mat['val_loc'].ravel() - 1
-        self.test_seen_loc = splits_mat['test_seen_loc'].ravel() - 1
-        self.test_unseen_loc = splits_mat['test_unseen_loc'].ravel() - 1
-
-        if self.side_info_source not in ['original', 'w2v', 'dna']:
-            print(
-                'Please choose a valid source for side information. There are 3 possibilities for CUB data: ["original", "w2v", "dna"] and one for INSECT: "dna"')
-            return
-
-        if (self.dataset == 'INSECT') and (self.side_info_source != 'dna'):
-            print(
-                'Invalid side information source for INSECT data! There is only one side information source for INSECT dataset: "dna". Model will continue using DNA as side information')
-        if self.dataset == 'INSECT':
-            if self.alignment is True:
-                print("INSECT: Aligned")
-                self.side_info = np.genfromtxt(os.path.join(self.datapath, self.dataset, 'dna_embedding.csv'), delimiter=',')
-            else:
-                print("INSECT: Not aligned")
-                self.side_info = np.genfromtxt(os.path.join(self.datapath, self.dataset, 'dna_embedding_no_alignment.csv'), delimiter=',')
-
-        # Origin
-        # self.side_info = splits_mat['att']
-        # if self.dataset=='CUB':
-        #     if self.side_info_source=='w2v':
-        #         self.side_info = splits_mat['att_w2v']
-        #     else:
-        #         self.side_info = splits_mat['att_dna']
-
-        # Modified
-        if self.dataset == 'CUB':
-            if self.side_info_source == 'w2v':
-                self.side_info = splits_mat['att_w2v']
-            else:
-                if self.alignment is True:
-                    print("CUB: Aligned")
-                    self.side_info = np.genfromtxt(os.path.join(self.datapath, self.dataset, 'dna_embedding.csv'), delimiter=',')
-                else:
-                    print("CUB: Not aligned")
-                    self.side_info = np.genfromtxt(os.path.join(self.datapath, self.dataset, 'dna_embedding_no_alignment.csv'), delimiter=',')
+def hdf5_to_dict(group):
+    result = {}
+    for key in group.keys():
+        item = group[key]
+        if isinstance(item, h5py.Group):
+            result[key] = hdf5_to_dict(item)  # 递归处理子组
+        elif isinstance(item, h5py.Dataset):
+            result[key] = item[()]  # 将数据集的值存储到字典中
+    return result
 
 
+def reverse_dict(dictionary):
+    reversed_dict = {value: key for key, value in dictionary.items()}
+    return reversed_dict
 
-    def data_split(self):
-        if self.tuning:
-            train_idx, test_seen_idx = crossvalind_holdout(self.labels, self.train_loc, 0.2)
-            test_unseen_idx = self.val_unseen_loc
-        else:
-            train_idx = self.trainval_loc
-            test_seen_idx = self.test_seen_loc
-            test_unseen_idx = self.test_unseen_loc
-        xtrain = self.features[train_idx]
-        ytrain = self.labels[train_idx]
-        xtest_seen = self.features[test_seen_idx]
-        ytest_seen = self.labels[test_seen_idx]
-        xtest_unseen = self.features[test_unseen_idx]
-        ytest_unseen = self.labels[test_unseen_idx]
 
-        self.seenclasses = np.unique(ytrain)
-        self.unseenclasses = np.unique(ytest_unseen)
+def get_image_feature_from_image_names(np_array_of_image_name, path_to_hdf5, using_cropped_image_feature):
+    image_feature = []
+    with h5py.File(path_to_hdf5, 'r') as f:
+        group_name = 'original_256_image_feature'
+        if using_cropped_image_feature:
+            group_name = 'cropped_256_image_feature'
+        keys = list(f[group_name].keys())
+        for name in tqdm(np_array_of_image_name):
+            image_feature.append(f[group_name][name])
+    f.close()
+    image_feature = np.array(image_feature)
 
-        return xtrain, ytrain, xtest_seen, ytest_seen, xtest_unseen, ytest_unseen
+    return image_feature
 
-    def load_tuned_params(self):
 
-        if self.dataset not in ['INSECT', 'CUB']:
-            print(
-                'The provided dataset is not in the gallery. Please use one of these 2 datsets to load tuned params: ["INSECT", "CUB"]')
-            return
+def extract_image_feature_from_hdf5(path_to_image_feature_hdf5):
+    with h5py.File(path_to_image_feature_hdf5, 'r') as f:
+        all_splits = list(f.keys())
+        x_train_seen = f['train_seen']['image_features'][:]
+        y_train_seen = f['train_seen']['label_in_idx'][:]
+        x_test_seen = f['test_seen']['image_features'][:]
+        y_test_seen = f['test_seen']['label_in_idx'][:]
+        x_test_unseen_easy = f['test_unseen_easy']['image_features'][:]
+        y_test_unseen_easy = f['test_unseen_easy']['label_in_idx'][:]
+        x_test_unseen_hard = f['test_unseen_hard']['image_features'][:]
+        y_test_unseen_hard = f['test_unseen_hard']['label_in_idx'][:]
+    f.close()
+    return x_train_seen, y_train_seen, x_test_seen, y_test_seen, x_test_unseen_easy, y_test_unseen_easy, x_test_unseen_hard, y_test_unseen_hard
 
-        dim = 500
 
-        if self.dataset == 'INSECT':
-            hyperparams = [0.1, 10, 5 * dim, 10, 3]
+def get_label_in_int_to_dna_feature(path_to_dna_feature_hdf5, path_to_label_map_json, taxonomy_level):
+    with open(path_to_label_map_json, "r") as json_file:
+        label_in_str_to_label_in_int = json.load(json_file)
+    json_file.close()
 
-        if self.dataset == 'CUB':
-            if self.side_info_source == 'original':
-                hyperparams = [1, 25, 500 * dim, 10, 3]
-            elif self.side_info_source == 'w2v':
-                hyperparams = [0.1, 25, 5 * dim, 5, 2]
-            elif self.side_info_source == 'dna':
-                hyperparams = [0.1, 25, 25 * dim, 5, 3]
+    label_in_int_to_label_in_str = reverse_dict(label_in_str_to_label_in_int)
 
-        return self.side_info, hyperparams[0], hyperparams[1], hyperparams[2], hyperparams[3], hyperparams[4]
+    with h5py.File(path_to_dna_feature_hdf5, 'r') as f:
+        group = f[taxonomy_level + '_class_level_dna_feature']
+        label_in_str_to_dna_feature = hdf5_to_dict(group)
+    f.close()
+    label_in_int_to_dna_feature = {}
+    for label_in_str in label_in_str_to_dna_feature.keys():
+        label_in_int = label_in_str_to_label_in_int[label_in_str]
+        label_in_int_to_dna_feature[label_in_int] = label_in_str_to_dna_feature[label_in_str]
+    return label_in_int_to_dna_feature, label_in_int_to_label_in_str
+
+
+def load_data(image_feature_dir, dna_feature_dir, label_map_dir, taxonomy_level, using_cropped_image_feature,
+              source_of_dna_barcode):
+    if using_cropped_image_feature:
+        image_type = 'cropped'
+    else:
+        image_type = 'original'
+
+    path_to_image_feature_hdf5 = os.path.join(image_feature_dir,
+                                              taxonomy_level + "_image_feature_" + image_type + ".hdf5")
+
+    x_train_seen, y_train_seen, x_test_seen, y_test_seen, x_test_unseen_easy, y_test_unseen_easy, x_test_unseen_hard, y_test_unseen_hard = extract_image_feature_from_hdf5(
+        path_to_image_feature_hdf5)
+
+    path_to_label_map_json = os.path.join(label_map_dir, taxonomy_level + "_level_label_map.json")
+
+    path_to_dna_feature_hdf5 = os.path.join(dna_feature_dir, source_of_dna_barcode,
+                                            taxonomy_level + "_dna_feature.hdf5")
+
+    label_in_int_to_dna_feature, label_in_int_to_label_in_str = get_label_in_int_to_dna_feature(
+        path_to_dna_feature_hdf5, path_to_label_map_json,
+        taxonomy_level)
 
 
 ### Seen, Unseen class and Harmonic mean claculation ###
-def perf_calc_acc(y_ts_s, y_ts_us, ypred_s, ypred_us):
+def perf_calc_acc(y_ts_s, y_ts_us_easy, y_ts_us_hard, y_pred_s, y_pred_us_easy, y_pred_us_hard):
     seen_cls = np.unique(y_ts_s)
-    unseen_cls = np.unique(y_ts_us)
+    unseen_easy_cls = np.unique(y_ts_us_easy)
+    unseen_hard_cls = np.unique(y_ts_us_hard)
+
     # Performance calculation
     acc_per_cls_s = np.zeros((len(seen_cls), 1))
-    acc_per_cls_us = np.zeros((len(unseen_cls), 1))
+    acc_per_cls_us_easy = np.zeros((len(unseen_easy_cls), 1))
+    acc_per_cls_us_hard = np.zeros((len(unseen_hard_cls), 1))
 
     for i in range(len(seen_cls)):
         lb = seen_cls[i]
         idx = y_ts_s == lb
-        acc_per_cls_s[i] = np.sum(ypred_s[idx.ravel()] == lb) / np.sum(idx)
+        acc_per_cls_s[i] = np.sum(y_pred_s[idx.ravel()] == lb) / np.sum(idx)
 
-    for i in range(len(unseen_cls)):
-        lb = unseen_cls[i]
-        idx = y_ts_us == lb
-        acc_per_cls_us[i] = np.sum(ypred_us[idx.ravel()] == lb) / np.sum(idx)
+    for i in range(len(unseen_easy_cls)):
+        lb = unseen_easy_cls[i]
+        idx = y_ts_us_easy == lb
+        acc_per_cls_us_easy[i] = np.sum(y_pred_us_easy[idx.ravel()] == lb) / np.sum(idx)
+
+    for i in range(len(unseen_hard_cls)):
+        lb = unseen_hard_cls[i]
+        idx = y_ts_us_hard == lb
+        acc_per_cls_us_hard[i] = np.sum(y_pred_us_hard[idx.ravel()] == lb) / np.sum(idx)
+
 
     ave_s = np.mean(acc_per_cls_s)
-    ave_us = np.mean(acc_per_cls_us)
-    H = 2 * ave_s * ave_us / (ave_s + ave_us)
+    ave_us_easy = np.mean(acc_per_cls_us_easy)
+    ave_us_hard = np.mean(acc_per_cls_us_hard)
+    H = 3 * ave_s * ave_us_easy * ave_us_hard / (ave_s + ave_us_easy + ave_us_hard)
 
-    return acc_per_cls_s, acc_per_cls_us, ave_s, ave_us, H
+    return acc_per_cls_s, acc_per_cls_us_easy, acc_per_cls_us_hard, ave_s, ave_us_easy, ave_us_hard, H
 
 
-def apply_pca(x_tr, x_ts_s, x_ts_us, pca_dim):
+def apply_pca(x_train_seen, x_test_seen, x_test_unseen_easy, x_test_unseen_hard, pca_dim):
     # Dimentionality reduction using PCA
-    _, eig_vec = eigh(np.cov(x_tr.T))
-    x_tr = np.dot(x_tr, eig_vec[:, -pca_dim:])
-    x_ts_s = np.dot(x_ts_s, eig_vec[:, -pca_dim:])
-    x_ts_us = np.dot(x_ts_us, eig_vec[:, -pca_dim:])
+    _, eig_vec = eigh(np.cov(x_train_seen.T))
+    x_train_seen = np.dot(x_train_seen, eig_vec[:, -pca_dim:])
+    x_test_seen = np.dot(x_test_seen, eig_vec[:, -pca_dim:])
+    x_test_unseen_easy = np.dot(x_test_unseen_easy, eig_vec[:, -pca_dim:])
+    x_test_unseen_hard = np.dot(x_test_unseen_hard, eig_vec[:, -pca_dim:])
+    return x_train_seen, x_test_seen, x_test_unseen_easy, x_test_unseen_hard
 
-    return x_tr, x_ts_s, x_ts_us
+
+def get_dna_feature_in_numpy_array(label_in_int_to_dna_feature):
+    list_of_label_in_int = sorted(list(label_in_int_to_dna_feature.keys()))
+    list_of_dna_feature = []
+    for int_label in list_of_label_in_int:
+        list_of_dna_feature.append(label_in_int_to_dna_feature[int_label])
+    dna_feature_in_numpy = np.vstack(list_of_dna_feature)
+
+    return dna_feature_in_numpy
 
 
+"""
 def crossvalind_holdout(labels, idxs, ratio=0.2):
     # Shuffle the index
     random.seed(42)
@@ -176,10 +179,10 @@ def crossvalind_holdout(labels, idxs, ratio=0.2):
                 current_count += 1
     return train, test
 
-
 def split_loc_by_ratio(loc_index, ratio=0.2):
     n = int(len(loc_index) * ratio)
     np.random.shuffle(loc_index)
     test_loc = loc_index[0:n]
     train_loc = loc_index[n:]
     return np.sort(train_loc), np.sort(test_loc)
+"""

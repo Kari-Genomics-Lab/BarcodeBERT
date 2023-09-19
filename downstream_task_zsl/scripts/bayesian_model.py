@@ -1,23 +1,66 @@
+import os
 import time
 
 import numpy as np
 from scipy.special import gammaln, softmax
 from scipy.linalg import solve_triangular, solve, eigh, eig
-from utils import data_loader, perf_calc_acc, apply_pca
+from utils import load_data, perf_calc_acc, apply_pca, get_label_in_int_to_dna_feature, extract_image_feature_from_hdf5, \
+    get_dna_feature_in_numpy_array
 from scipy.spatial.distance import cdist
+from tqdm import tqdm
 
 
 class Model(object):
 
     def __init__(self, opt):
         super(Model, self).__init__()
-
-        self.datapath = opt.datapath
-        self.dataset = opt.dataset
-        self.side_info = opt.side_info
+        self.image_feature_dir = opt.image_feature_dir
+        self.dna_feature_dir = opt.dna_feature_dir
+        self.label_map_dir = opt.label_map_dir
+        self.taxonomy_level = opt.taxonomy_level
+        self.source_of_dna_barcode = opt.source_of_dna_barcode
         self.pca_dim = opt.pca_dim
-        self.tuning = opt.tuning
-        self.alignment = opt.alignment
+        # self.tuning = opt.tuning
+        self.using_cropped_image_feature = opt.using_cropped_image_feature
+        self.dataset = "BioScan-1M"  # Hard code for now.
+        self.unseen_classes = None
+        self.x_train_seen = None
+        self.y_train_seen = None
+        self.x_test_seen = None
+        self.y_test_seen = None
+        self.x_test_unseen_easy = None
+        self.y_test_unseen_easy = None
+        self.x_test_unseen_hard = None
+        self.y_test_unseen_hard = None
+        self.label_in_int_to_dna_feature = None
+        self.label_in_int_to_label_in_str = None
+        self.dna_feature_in_numpy = None
+
+    def load_data(self):
+
+        if self.using_cropped_image_feature:
+            image_type = 'cropped'
+        else:
+            image_type = 'original'
+
+        path_to_image_feature_hdf5 = os.path.join(self.image_feature_dir,
+                                                  self.taxonomy_level + "_image_feature_" + image_type + ".hdf5")
+
+        self.x_train_seen, self.y_train_seen, self.x_test_seen, self.y_test_seen, self.x_test_unseen_easy, self.y_test_unseen_easy, self.x_test_unseen_hard, self.y_test_unseen_hard = extract_image_feature_from_hdf5(
+            path_to_image_feature_hdf5)
+
+        path_to_label_map_json = os.path.join(self.label_map_dir, self.taxonomy_level + "_level_label_map.json")
+
+        path_to_dna_feature_hdf5 = os.path.join(self.dna_feature_dir, self.source_of_dna_barcode,
+                                                self.taxonomy_level + "_dna_feature.hdf5")
+
+        self.label_in_int_to_dna_feature, self.label_in_int_to_label_in_str, = get_label_in_int_to_dna_feature(
+            path_to_dna_feature_hdf5, path_to_label_map_json,
+            self.taxonomy_level)
+
+        self.unseen_classes = np.unique(np.concatenate((self.y_test_unseen_easy, self.y_test_unseen_hard), axis=0))
+
+        self.dna_feature_in_numpy = get_dna_feature_in_numpy_array(self.label_in_int_to_dna_feature).T
 
     ### Claculating class mean and covariance priors ###
     def calculate_priors(self, xtrain, ytrain, model_v='unconstrained'):
@@ -39,10 +82,31 @@ class Model(object):
                 mu_0 += np.mean(xtrain[idd], axis=0)
             Sigma_0 /= nc
             mu_0 /= nc
-
         return mu_0, Sigma_0
 
-    # Check for tie, if yes, change the last similar class with the next one untill tie broken    
+    def bayesian_cls_train(self, x_tr, y_tr, unseenclasses, att, k_0=0.1, k_1=10, m=5 * 500, mu_0=0, s=1, Sigma_0=0,
+                           K=2, pca_dim=0, tuning=False):
+
+        s_classes = np.unique(y_tr)
+        us_classes = unseenclasses
+        # Attributes of seen and unseen classes
+        # print(att.shape)
+        # print(us_classes)
+        # exit()
+        att_unseen = att[:, us_classes].T
+        att_seen = att[:, s_classes].T
+        d0 = x_tr.shape[1]
+
+        if tuning:
+            Psi = (m - d0 - 1) * Sigma_0 / s
+        else:
+            [mu_0, Sigma_0] = self.calculate_priors(x_tr, y_tr)
+            Psi = (m - d0 - 1) * Sigma_0 / s
+
+        # Class predictive cov, mean and DoF from unconstrained model
+        print('PPD derivation is Done!!')
+        return self.calculate_ppd_params(x_tr, y_tr, att_seen, att_unseen, us_classes, K, Psi, mu_0, m, k_0, k_1)
+
     def check_for_tie(self, curr_unseen_class, usclass_list, seenclasses, curr_classes, s_in, K):
         ll = len(usclass_list)
         flag = True
@@ -59,7 +123,6 @@ class Model(object):
 
         return curr_classes, usclass_list
 
-    ### Calculating Posterior Predictive Distribution parameters ###
     def calculate_ppd_params(self, xtrain, ytrain, att_seen, att_unseen, unseenclasses, K, Psi, mu0, m, k0, k1):
 
         seenclasses = np.unique(ytrain)
@@ -78,7 +141,9 @@ class Model(object):
         ncl = len(uy)
         cnt = 0
         # Main for loop for  unseen classes params estimation
-        for i in range(ncl):
+        pbar = tqdm(list(range(ncl)))
+        for i in pbar:
+            pbar.set_description("calculate ppd params for unseen classes: ")
 
             # Calculating Euclidean distance between the selected unseen class
             # attributes and all seen classes
@@ -96,7 +161,7 @@ class Model(object):
             Xi = xtrain[idx]
             uyi = np.unique(Yi)
 
-            # Initialize component sufficient statistics 
+            # Initialize component sufficient statistics
             ncpi = len(uyi)
             xkl = np.zeros((ncpi, d))  # Component means
             Skl = np.zeros((d, d, ncpi))  # Component scatter matrices
@@ -129,7 +194,9 @@ class Model(object):
         uy = seenclasses
         ncl = len(uy)
 
-        for i in range(ncl):
+        pbar = tqdm(list(range(ncl)))
+        for i in pbar:
+            pbar.set_description("calculate ppd params for seen classes: ")
             idx = np.in1d(ytrain, uy[i])
             Xi = xtrain[idx]
 
@@ -188,7 +255,7 @@ class Model(object):
                 class_id[cnt] = uy[i]
                 cnt += 1
 
-            # The case where only data likelihood and global priors are used and local priors are ignored. This 
+            # The case where only data likelihood and global priors are used and local priors are ignored. This
             # is the case we used for seen classes as mentioned in the paper
             else:
                 v_s[cnt] = cur_n + m - d + 1
@@ -242,34 +309,7 @@ class Model(object):
 
         return ypred, lkh
 
-    def bayesian_cls_train(self, x_tr, y_tr, unseenclasses, att, k_0=0.1, k_1=10, m=5 * 500, mu_0=0, s=1, Sigma_0=0,
-                           K=2, pca_dim=0, tuning=False):
-        us_classes = unseenclasses
-        s_classes = np.unique(y_tr)
-
-        # Attributes of seen and unseen classes
-        att_unseen = att[:, us_classes].T
-        att_seen = att[:, s_classes].T
-        d0 = x_tr.shape[1]
-
-        if tuning:
-            Psi = (m - d0 - 1) * Sigma_0 / s
-        else:
-            [mu_0, Sigma_0] = self.calculate_priors(x_tr, y_tr)
-            Psi = (m - d0 - 1) * Sigma_0 / s
-
-        # Class predictive cov, mean and DoF from unconstrained model
-        print('PPD derivation is Done!!')
-        return self.calculate_ppd_params(x_tr, y_tr, att_seen, att_unseen, us_classes, K, Psi, mu_0, m, k_0, k_1)
-
     def hyperparameter_tuning(self, constrained=False):
-        # Default # features for PCA id Unconstrained model selected
-        dataloader = data_loader(self.datapath, self.dataset, self.side_info, self.tuning)
-
-        # load attribute
-        att, _, _, _, _, _ = dataloader.load_tuned_params()
-
-        xtrain, ytrain, xtest_seen, ytest_seen, xtest_unseen, ytest_unseen = dataloader.data_split()
         dim = 500
 
         if self.pca_dim is not None:
@@ -277,16 +317,10 @@ class Model(object):
 
         k0_range = [0.1, 1]
         k1_range = [10, 25]
-        a0_range = [1, 10, 100]
-        b0_range = a0_range
         s_range = [1, 5, 10]
         K_range = [1, 2, 3]
 
-        # Initialization
-        # ss = 0
-        # a0 = 20
-        # b0 = 20
-        # mm = dim + 2
+
 
         bestH = 0
         # best_acc_s = 0
@@ -299,9 +333,15 @@ class Model(object):
 
         if not constrained:
             print('Applying PCA to reduce the dimension...')
-            xtrain, xtest_seen, xtest_unseen = apply_pca(xtrain, xtest_seen, xtest_unseen, self.pca_dim)
-            [mu_0, Sigma_0] = self.calculate_priors(xtrain, ytrain, model_v='unconstrained')
-            m_range = [5 * dim, 25 * dim, 100 * dim, 500 * dim]
+            x_train_seen, x_test_seen, x_test_unseen_easy, x_test_unseen_hard = apply_pca(self.x_train_seen,
+                                                                                          self.x_test_seen,
+                                                                                          self.x_test_unseen_easy,
+                                                                                          self.x_test_unseen_hard,
+                                                                                          self.pca_dim)
+            y_train_seen = self.y_train_seen
+
+            [mu_0, Sigma_0] = self.calculate_priors(x_train_seen, y_train_seen, model_v='unconstrained')
+            m_range = [5 * dim, 50 * dim, 500 * dim]
             print('Tuning is getting started...')
             for kk in K_range:
                 for k_0 in k0_range:
@@ -309,8 +349,9 @@ class Model(object):
                         for m in m_range:
                             for ss in s_range:
                                 time_s = time.time()
-                                Sig_s, mu_s, v_s, class_id, _ = self.bayesian_cls_train(xtrain, ytrain,
-                                                                                        dataloader.unseenclasses, att,
+                                Sig_s, mu_s, v_s, class_id, _ = self.bayesian_cls_train(x_train_seen, y_train_seen,
+                                                                                        self.unseen_classes,
+                                                                                        self.dna_feature_in_numpy,
                                                                                         k_0=k_0,
                                                                                         k_1=k_1, m=m, s=ss, K=kk,
                                                                                         mu_0=mu_0,
@@ -318,15 +359,28 @@ class Model(object):
                                                                                         pca_dim=self.pca_dim,
                                                                                         tuning=True)
 
-                                ### Prediction phase ###
-                                ypred_unseen, prob_mat_unseen = self.bayesian_cls_evaluate(xtest_unseen, Sig_s, mu_s,
-                                                                                           v_s, class_id)
-                                ypred_seen, prob_mat_seen = self.bayesian_cls_evaluate(xtest_seen, Sig_s, mu_s, v_s,
-                                                                                       class_id)
+                                print("Training is done.")
 
-                                acc_per_cls_s, acc_per_cls_us, gzsl_seen_acc, gzsl_unseen_acc, H = perf_calc_acc(
-                                    ytest_seen, ytest_unseen,
-                                    ypred_seen, ypred_unseen)
+                                ### Prediction phase ###
+                                y_pred_seen, prob_mat_seen = self.bayesian_cls_evaluate(x_test_seen, Sig_s, mu_s,
+                                                                                        v_s,
+                                                                                        class_id)
+                                print("Prediction for seen easy is done.")
+
+                                y_pred_unseen_easy, prob_mat_unseen_easy = self.bayesian_cls_evaluate(
+                                    x_test_unseen_easy, Sig_s, mu_s,
+                                    v_s, class_id)
+                                print("Prediction for unseen easy is done.")
+
+                                y_pred_unseen_hard, prob_mat_unseen_hard = self.bayesian_cls_evaluate(
+                                    x_test_unseen_hard, Sig_s, mu_s,
+                                    v_s, class_id)
+                                print("Prediction for unseen hard is done.")
+
+
+                                acc_per_cls_s, acc_per_cls_us_easy, acc_per_cls_us_hard, gzsl_seen_acc, gzsl_unseen_easy_acc, gzsl_unseen_hard_acc, H = perf_calc_acc(
+                                    self.y_test_seen, self.y_test_unseen_easy, self.y_test_unseen_hard,
+                                    y_pred_seen, y_pred_unseen_easy, y_pred_unseen_hard)
                                 print('\nCurrent parameters k0=%.2f, k1=%.2f, m=%d, s=%.1f, K=%d on %s dataset:' % (
                                     k_0, k_1, m, ss, kk, self.dataset))
                                 print()
@@ -337,65 +391,56 @@ class Model(object):
                                     best_m = m
                                     best_s = ss
                                     best_K = kk
-                                    print('\nResults from k0=%.2f, k1=%.2f, m=%d, s=%.1f, K=%d on %s dataset:' % (
+                                print('\nResults from k0=%.2f, k1=%.2f, m=%d, s=%.1f, K=%d on %s dataset:' % (
                                         k_0, k_1, m, ss, kk, self.dataset))
-                                    print('BSeen acc: %.2f%% Unseen acc: %.2f%%, Harmonic mean: %.2f%%\n' % (
-                                        gzsl_seen_acc * 100, gzsl_unseen_acc * 100, H * 100))
+                                print('BSeen acc: %.2f%%, Unseen easy acc: %.2f%%, Unseen hard acc: %.2f%%, Harmonic mean: %.2f%%\n' % (
+                                        gzsl_seen_acc * 100, gzsl_unseen_easy_acc * 100, gzsl_unseen_hard_acc * 100, H * 100))
                                 time_e = time.time()
                                 print('total cost: ' + str(time_e - time_s))
         else:
             # TODO: hyper-parameter tuning for constrained model, ignored for now.
             pass
 
-        return att, best_k0, best_k1, best_m, best_s, best_K
+        return self.dna_feature_in_numpy, best_k0, best_k1, best_m, best_s, best_K
 
     def train_and_eval(self):
-        """
-        Tuning process and optimal parameters
-        """
+        att, k_0, k_1, m, s, K = self.hyperparameter_tuning(constrained=False)
 
-        if self.tuning:
-            att, k_0, k_1, m, s, K = self.hyperparameter_tuning(constrained=False)
-            dataloader = data_loader(self.datapath, self.dataset, self.side_info, False, alignment=self.alignment)
-        else:
-            dataloader = data_loader(self.datapath, self.dataset, self.side_info, False, alignment=self.alignment)
-            att, k_0, k_1, m, s, K = dataloader.load_tuned_params()
 
-        """
-        To reproduce the results from paper please use the following function to laod the 
-        parameters obtained by CV
-        """
-
-        """
-        You may alter the hyperparameters by commenting out the section below. If you want to tune the parameters, just set tuning 
-        to True and write a simple for loop to go through the hyperparameters. Matlab version of the code already has tuning option.
-        """
-        # k_0 = 0.1
-        # k_1 = 10
-        # m   = 50*self.pca_dim
-        # s   = 1
-        # K   = 2
-        # att = dataloader.side_info
-
-        xtrain, ytrain, xtest_seen, ytest_seen, xtest_unseen, ytest_unseen = dataloader.data_split()
-
-        if self.pca_dim:
-            xtrain, xtest_seen, xtest_unseen = apply_pca(xtrain, xtest_seen, xtest_unseen, self.pca_dim)
+        x_train_seen, x_test_seen, x_test_unseen_easy, x_test_unseen_hard = apply_pca(self.x_train_seen,
+                                                                                          self.x_test_seen,
+                                                                                          self.x_test_unseen_easy,
+                                                                                          self.x_test_unseen_hard,
+                                                                                          self.pca_dim)
+        y_train_seen = self.y_train_seen
         time_s = time.time()
         ### PPD parameter estimation ###
-        Sig_s, mu_s, v_s, class_id, _ = self.bayesian_cls_train(xtrain, ytrain, dataloader.unseenclasses, att, k_0=k_0,
+        Sig_s, mu_s, v_s, class_id, _ = self.bayesian_cls_train(x_train_seen, y_train_seen, self.unseen_classes, att, k_0=k_0,
                                                                 k_1=k_1, m=m,
                                                                 s=s, K=K, pca_dim=self.pca_dim, tuning=False)
 
         ### Prediction phase ###
-        ypred_unseen, prob_mat_unseen = self.bayesian_cls_evaluate(xtest_unseen, Sig_s, mu_s, v_s, class_id)
-        ypred_seen, prob_mat_seen = self.bayesian_cls_evaluate(xtest_seen, Sig_s, mu_s, v_s, class_id)
+        y_pred_seen, prob_mat_seen = self.bayesian_cls_evaluate(x_test_seen, Sig_s, mu_s,
+                                                                v_s,
+                                                                class_id)
+        print("Prediction for seen easy is done.")
 
-        acc_per_cls_s, acc_per_cls_us, gzsl_seen_acc, gzsl_unseen_acc, H = perf_calc_acc(ytest_seen, ytest_unseen,
-                                                                                         ypred_seen, ypred_unseen)
+        y_pred_unseen_easy, prob_mat_unseen_easy = self.bayesian_cls_evaluate(
+            x_test_unseen_easy, Sig_s, mu_s,
+            v_s, class_id)
+        print("Prediction for unseen easy is done.")
+
+        y_pred_unseen_hard, prob_mat_unseen_hard = self.bayesian_cls_evaluate(
+            x_test_unseen_hard, Sig_s, mu_s,
+            v_s, class_id)
+        print("Prediction for unseen hard is done.")
+
+        acc_per_cls_s, acc_per_cls_us_easy, acc_per_cls_us_hard, gzsl_seen_acc, gzsl_unseen_easy_acc, gzsl_unseen_hard_acc, H = perf_calc_acc(
+            self.y_test_seen, self.y_test_unseen_easy, self.y_test_unseen_hard,
+            y_pred_seen, y_pred_unseen_easy, y_pred_unseen_hard)
 
         print('Results from k0=%.2f, k1=%.2f, m=%d, s=%.1f, K=%d on %s dataset:' % (k_0, k_1, m, s, K, self.dataset))
-        print('BSeen acc: %.2f%% Unseen acc: %.2f%%, Harmonic mean: %.2f%%' % (
-            gzsl_seen_acc * 100, gzsl_unseen_acc * 100, H * 100))
+        print('Best result: BSeen acc: %.2f%%, Unseen easy acc: %.2f%%, Unseen hard acc: %.2f%%, Harmonic mean: %.2f%%\n' % (
+            gzsl_seen_acc * 100, gzsl_unseen_easy_acc * 100, gzsl_unseen_hard_acc * 100, H * 100))
         time_e = time.time()
-        print('time cost: ' + str(time_e - time_s))
+        # print('time cost: ' + str(time_e - time_s))

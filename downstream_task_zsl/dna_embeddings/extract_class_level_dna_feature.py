@@ -31,11 +31,11 @@ def dna_barcode_to_one_hot(args, barcodes):
     
 
 def load_data(args):
-    seen_train_df = pd.read_csv(os.path.join(args.input_dir, args.taxnomy_level + "_seen_train.tsv") ,sep = '\t')
+    seen_train_df = pd.read_csv(os.path.join(args.input_dir, args.taxonomy_level + "_seen_train.tsv"), sep ='\t')
     
-    seen_test_df = pd.read_csv(os.path.join(args.input_dir, args.taxnomy_level + "_seen_test.tsv") ,sep = '\t')
-    easy_unseen_test_df = pd.read_csv(os.path.join(args.input_dir, args.taxnomy_level + "_easy_unseen_test.tsv") ,sep = '\t')
-    hard_unseen_test_df = pd.read_csv(os.path.join(args.input_dir, args.taxnomy_level + "_hard_unseen_test.tsv") ,sep = '\t')
+    seen_test_df = pd.read_csv(os.path.join(args.input_dir, args.taxonomy_level + "_seen_test.tsv"), sep ='\t')
+    easy_unseen_test_df = pd.read_csv(os.path.join(args.input_dir, args.taxonomy_level + "_easy_unseen_test.tsv"), sep ='\t')
+    hard_unseen_test_df = pd.read_csv(os.path.join(args.input_dir, args.taxonomy_level + "_hard_unseen_test.tsv"), sep ='\t')
     
     x_seen_train = seen_train_df['nucraw'].values
     x_seen_test = seen_test_df['nucraw'].values
@@ -53,10 +53,10 @@ def load_data(args):
     
     all_X = np.expand_dims(all_X, axis=3)
     
-    y_seen_train = seen_train_df[args.taxnomy_level].values
-    y_seen_test = seen_test_df[args.taxnomy_level].values
-    y_easy_unseen_test = easy_unseen_test_df[args.taxnomy_level].values
-    y_hard_unseen_test = hard_unseen_test_df[args.taxnomy_level].values
+    y_seen_train = seen_train_df[args.taxonomy_level].values
+    y_seen_test = seen_test_df[args.taxonomy_level].values
+    y_easy_unseen_test = easy_unseen_test_df[args.taxonomy_level].values
+    y_hard_unseen_test = hard_unseen_test_df[args.taxonomy_level].values
     labels = np.concatenate((y_seen_train, y_seen_test, y_easy_unseen_test, y_hard_unseen_test), axis=0)
     
     number_of_classes = len(np.unique(y_seen_train))
@@ -83,14 +83,14 @@ if __name__ == '__main__':
     parser.add_argument('--input_dir', type=str, default="../data/bioscan_1m", help="path to the directory that contains the split data.")
     parser.add_argument('--ckpt_path', type=str, default="../ckpt/dna_encoder/genus/2023_09_07_10_59_43/model.pth")
     # for species level: '../ckpt/dna_encoder/species/2023_09_07_09_18_55/model.pth'
-    
+    parser.add_argument('--embedding_dim', type=int, default=768)
     parser.add_argument('--pad_to', type=int, default=936)
     parser.add_argument('--taxnomy_level', type=str, default="genus")
     parser.add_argument('--output_dir', type=str, default="../data/bioscan_1m/extracted_feature", help="The path used to store the checkpoint.")
     args = parser.parse_args()
 
     all_X, labels, total_number_of_classes = load_data(args)
-    model = Model(1, total_number_of_classes, dim=2640).to(device)
+    model = Model(1, total_number_of_classes, dim=2640, embedding_dim=768).to(device)
     
     model.load_state_dict(torch.load(args.ckpt_path))
     dna_embeddings = get_embedding(model, all_X)
