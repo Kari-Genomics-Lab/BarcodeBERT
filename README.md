@@ -44,9 +44,11 @@ python Linear_probing.py 6
 ```
 
 Model Fine-tuning
-
+The input_path for fine-tuning the model should be a path to a folder that has train, test, and dev file.
 ```
-cd 
+python fine_tuning.py --input_path= path_to_the_input_folder --Pretrained_checkpoint_path path_to_the_pretrained_model  --k_mer=4 --stride=4
+python fine_tuning.py --input_path= path_to_the_input_folder --Pretrained_checkpoint_path path_to_the_pretrained_model  --k_mer=5 --stride=5
+python fine_tuning.py --input_path= path_to_the_input_folder --Pretrained_checkpoint_path path_to_the_pretrained_model  --k_mer=6 --stride=6
 ```
 
 
