@@ -68,7 +68,6 @@ Evaluation:
 
 ###### DNABERT-2
 
-Model Fine-tuning
 To fine-tune the model on our dataset, you need to follow the instructions in [DNABERT2 repository](https://github.com/Zhihan1996/DNABERT_2) for fine-tuning the model on new dataset. You can use the same input path that is used for fine-tuning BarcodeBERT as the input path to DNABERT2. 
 
 Evaluation:
