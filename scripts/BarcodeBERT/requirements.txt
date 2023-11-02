@@ -1,0 +1,15 @@
+torch
+numpy
+pandas
+scipy
+matplotlib
+umap-learn
+cython
+torchtext
+transformers
+seaborn
+scikit-learn
+boto3
+phate
+opt_einsum
+

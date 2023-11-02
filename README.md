@@ -1,8 +1,101 @@
 # BarcodeBERT
 
-A pre-trained representation from a transformers model for inference on insect DNA barcoding data.
+A pre-trained representation from a transformer model for inference on insect DNA barcoding data.
 
-*Note*: If you have been here before, you will note that the code is not a mess anymore. Shoutout to Niousha and Monireh. We do not need Hugging-Face as the entire architecture was implemented from scratch by them
+### Reproducing the results from the paper
+
+0. Clone this repository and install the required libraries
+
+1. Download the [data](https://github.com/jerryji1993/DNABERT)
+
+##### CNN model
+Training: 
+```
+cd paper/CNN
+python supervised_learning.py
+```
+
+Evaluation:
+```
+python genus_1NN.py
+python Linear_probing.py
+```
+
+##### BarcodeBERT
+
+Model Pretraining:
+```
+cd /paper/BarcodeBERT
+pip install --no-index -r requirements.txt
+python MGPU_MLM_train.py --input_path=../../data/pre_training.tsv --k_mer=4 --stride=4
+python MGPU_MLM_train.py --input_path=../../data/pre_training.tsv --k_mer=5 --stride=5
+python MGPU_MLM_train.py --input_path=../../data/pre_training.tsv --k_mer=6 --stride=6
+```
+
+Evaluation:
+```
+python MLM_genus_test.py 4
+python MLM_genus_test.py 5
+python MLM_genus_test.py 6
+
+python Linear_probing.py 4
+python Linear_probing.py 5
+python Linear_probing.py 6
+```
+
+Model Fine-tuning
+
+```
+cd 
+```
+
+
+
+
+
+##### DNABERT
+To fine-tune the model on our data, you first need to follow the instructions in the [DNABERT repository](https://github.com/jerryji1993/DNABERT) original repository to donwnload the model weights. Place them in the `dnabert` folder and then run the following:
+
+```
+cd paper/DNABERT
+pip install --no-index -r requirements.txt
+python supervised_learning.py --input_path=../../data -k 4 --model dnabert --checkpoint dnabert/4-new-12w-0
+python supervised_learning.py --input_path=../../data -k 6 --model dnabert --checkpoint dnabert/6-new-12w-0
+python supervised_learning.py --input_path=../../data -k 5 --model dnabert --checkpoint dnabert/5-new-12w-0
+```
+
+Evaluation:
+
+
+###### DNABERT-2
+
+<!--- 
+
+### Using BarcodeBERT as feature extractor in your own biodiversity analysis:
+
+0. Clone this repository and install the required libraries
+
+1. Download the pre-trained weights
+
+2. Produce the features
+**Note**: The model is ready to be used on data directly downloaded from BOLD. To use the model on your own data, please format the .tsv input file accordingly. 
+
+
+### Fine-Tuning BarcodeBERT using your own data
+
+0. Clone this repository and install the required libraries
+
+1. Download the pre-trained weights
+
+2. Fine-Tune the model
+**Note**: The model is ready to be used on data directly downloaded from BOLD. To use the model on your own data, please format the .tsv input file accordingly. 
+
+3. Test the fine-tuned model on the test dataset.
+
+
+
+
+
 
 0. Download the [data](https://vault.cs.uwaterloo.ca/s/YojSrfn7n2iLfa9)
 1. Make sure you have all the required libraries before running (remove the --no-index flags if you are not training on CC)
@@ -11,150 +104,4 @@ A pre-trained representation from a transformers model for inference on insect D
 pip install -r requirements.txt
 ```
 
-Progress on the Bioscan transformers projects so far:
-
-1. Describe the original data [1.5M barcodes dataset](https://www.nature.com/articles/s41597-019-0320-2#Sec22) and report them.  
-
-| phylum_name     |      processid |       sampleid |   bin_uri |   class_name |   order_name |   family_name |   genus_name |   species_name |    nucleotides |
-|:----------------|---------------:|---------------:|----------:|-------------:|-------------:|--------------:|-------------:|---------------:|---------------:|
-| Annelida        | 3086           | 3086           |       520 |            2 |           17 |            49 |          152 |            335 | 2121           |
-| Arthropoda      |    1.49283e+06 |    1.49283e+06 |     64082 |           15 |           68 |           933 |         6246 |          16733 |    1.06563e+06 |
-| Brachiopoda     |   23           |   23           |         3 |            1 |            2 |             2 |            2 |              3 |   20           |
-| Bryozoa         |    6           |    6           |         4 |            4 |            4 |             4 |            3 |              3 |    5           |
-| Chordata        |  479           |  479           |       103 |            5 |           19 |            38 |           68 |             90 |  290           |
-| Cnidaria        |  206           |  206           |        47 |            4 |           11 |            25 |           26 |             25 |  113           |
-| Echinodermata   |  422           |  422           |        79 |            5 |           17 |            26 |           43 |             74 |  276           |
-| Hemichordata    |    4           |    4           |         2 |            1 |            1 |             1 |            2 |              2 |    4           |
-| Mollusca        | 3251           | 3251           |       373 |            7 |           31 |            98 |          163 |            272 | 1931           |
-| Nematoda        |   33           |   33           |         9 |            2 |            5 |            11 |            6 |              3 |   24           |
-| Nemertea        |   81           |   81           |        22 |            4 |            3 |             6 |            6 |              6 |   56           |
-| Platyhelminthes |    1           |    1           |         1 |            1 |            1 |             1 |            1 |              1 |    1           |
-| Porifera        |    7           |    7           |         6 |            1 |            3 |             4 |            5 |              4 |    7           |
-| Priapulida      |    1           |    1           |         1 |            1 |            1 |             1 |            1 |              1 |    1           |
-| Tardigrada      |    1           |    1           |         1 |            1 |            1 |             1 |            1 |              1 |    1           |
-
-![Length distribution](Figures/original_length_distribution.png)
-
-2.  Pre-processing steps:
-    * Remove empty entries in the "Nucleotides" column.
-    * Replace all non-ACGT symbols including gaps for 'N's
-    * Remove sequence duplicates
-    * Find inconsistent labels at the species level
-    * Remove trailing 'N's 
-    * Remove all the sequences shorter than 200.
-    * Remove all sequences with more than 50% as 'N'
-
-
-| phylum_name     |   processid |   sampleid |   bin_uri |   class_name |   order_name |   family_name |   genus_name |   species_name |   nucleotides |   sequence_len |
-|:----------------|------------:|-----------:|----------:|-------------:|-------------:|--------------:|-------------:|---------------:|--------------:|---------------:|
-| Annelida        |        2102 |       2102 |       516 |            2 |           16 |            48 |          150 |            329 |          2102 |             52 |
-| Arthropoda      |      969247 |     969247 |     64067 |           14 |           67 |           932 |         6244 |          16661 |        969247 |            421 |
-| Brachiopoda     |          20 |         20 |         2 |            1 |            2 |             2 |            2 |              2 |            20 |              4 |
-| Bryozoa         |           5 |          5 |         4 |            3 |            3 |             3 |            2 |              2 |             5 |              4 |
-| Chordata        |         289 |        289 |       102 |            5 |           18 |            37 |           67 |             89 |           289 |              9 |
-| Cnidaria        |         112 |        112 |        46 |            4 |           10 |            24 |           25 |             24 |           112 |              9 |
-| Echinodermata   |         276 |        276 |        79 |            5 |           17 |            26 |           43 |             74 |           276 |             13 |
-| Hemichordata    |           4 |          4 |         2 |            1 |            1 |             1 |            2 |              1 |             4 |              2 |
-| Mollusca        |        1912 |       1912 |       372 |            6 |           30 |            97 |          162 |            271 |          1912 |             71 |
-| Nematoda        |          24 |         24 |         8 |            2 |            5 |            10 |            5 |              2 |            24 |              4 |
-| Nemertea        |          56 |         56 |        22 |            3 |            2 |             5 |            5 |              5 |            56 |              4 |
-| Platyhelminthes |           1 |          1 |         1 |            0 |            0 |             0 |            0 |              0 |             1 |              1 |
-| Porifera        |           7 |          7 |         5 |            1 |            3 |             4 |            4 |              3 |             7 |              2 |
-| Priapulida      |           1 |          1 |         1 |            1 |            1 |             1 |            1 |              1 |             1 |              1 |
-| Tardigrada      |           1 |          1 |         1 |            1 |            1 |             1 |            0 |              0 |             1 |              1 |
-
-**NOTE**: There are 119 species for which at least one of its sequences is duplicated and labeled with another species' name. All the sequences in those species are in the pre-processing dataset.
-
-3. Split the dataset into:
-    * **Supervised Seen:** Dataset for evaluating the capacity of the model to learn the species label, contains 50 barcodes for all the species with at least 50 specimens. This will be split into training (70%), testing(20%), and validation (10%). (1390 species and 50 barcodes per species)
-    * **Unseen**: Dataset for evaluating the quality of the learned embeddings (50 barcodes from 100 selected species).
-    * **Unsupervised Pretraining:** Dataset containing the rest of the sequences, here we will have sequences with incomplete taxonomic annotations or sequences in the problematic species. 
-
-4. Script to test the 1D-CNN architecture `1D_CNN_supervised.py` for supervised and `1D_CNN_metric.py` for testing the metric learning on the unseen dataset.
-
-```console
------------------------------------------------------------
-| end of epoch 199 | time: 20.77s | Test accuracy    0.976 
------------------------------------------------------------
-```
-
-![1D_CNN_Embedding](Figures/1D_CNN_embeddings.png)
-
-```console
-Best Metric:  manhattan 
-Accuracy 1-kNN:  0.8702000000000004
-```
-
-5. Script to test the BERT-Like architecture for supervised and metric learning. `BERT_supervised.py` for supervised and `BERT_metric.py` for testing the metric learning on the unseen dataset.
-
-```console
-config = {
-    "d_model": 768,
-    "n_heads": 12,
-    "n_layers": 12,
-    "max_len": 512
-
-}
-
------------------------------------------------------------
-| end of epoch  19 | time: 131.13s | valid accuracy    0.965 
------------------------------------------------------------
-```
-
-```
-Using GAP
-[0.9895999999999998, 0.8664000000000003, 0.9899999999999998]
-Best Metric:  minkowski Accuracy:  0.9899999999999998
-
-Using CLS token
-[0.9877999999999999, 0.8834000000000001, 0.9873999999999999]
-Best Metric:  manhattan Accuracy:  0.9877999999999999
-
-```
-![BERT_Embedding](Figures/Supervised_BERT_GAP_embeddings.png)
-
-
-6. Script to train the Bert-like architecture as an MLM. 
-    + `MLM_train.py` contains vainilla code with non-overlapping kmers and only the masked component of the loss. I am using a lr scheduler, but the loss drops to zero after the first step of the scheduler. 
-
-    ```
-    GAP
-    [0.8103999999999998, 0.5618000000000002, 0.8084]
-    Best Metric:  manhattan Accuracy:  0.810399999999999
-    ```
-
-    ![Vainilla_Pre_training_BERT_Embedding](Figures/Pre_Training_BERT_GAP_embeddings.png)
-
-    ![Vainilla_Pre_training_BERT_Loss](Figures/Pre_Training_Loss_MLM.png)
-
-    + `HF_MLM_train.py` contains Hugging Face implementation of the model and code with non-overlapping kmers. Only the masked component of the loss is considered. I am using a lr scheduler and a 0.5 masking ration this time, it fixed the memorization probelm.
-
-    ```
-    GAP
-    [0.9115999999999999, 0.6586, 0.9122]
-    Best Metric:  minkowski Accuracy:  0.9122
-    ```
-
-    ![Vainilla_Pre_training_BERT_Embedding](Figures/0.5_Mask_Pre_Training_BERT_GAP_embeddings.png)
-
-    ![Vainilla_Pre_training_BERT_Loss](Figures/0.5_Mask_Pre_Training_Loss.png)
-
-    + `train.py` contains **Hugging-Face model** with the following characteristics:
-            - overlapping k-mers  
-            - Two components of the loss.  
-            - Multi-GPU support   
-
-        
-7. Script to train the Bert-like architecture as an MLM. 
-    + `MGPU_MLM_train.py` contains vanilla code with non-overlapping kmers and only the masked component of the loss. Comparing to 6 I am using a smaller weight decay for AdamW, and train the network for 44 epochs.
-    ```
-    GAP
-    [0.9916000000000001, 0.992, 0.9916000000000001]
-    Best Metric:  cosine Accuracy:  0.992
-    ```
-
-    ![Vainilla_Pre_training_BERT_Embedding](Figures/0.7_Mask_Pre_Training_BERT_GAP_embeddings.png)
-
-    ![Vainilla_Pre_training_BERT_Loss](Figures/0.7_Mask_Pre_Training_Loss.png)
-
-
+--!>
