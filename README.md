@@ -52,9 +52,6 @@ python fine_tuning.py --input_path= path_to_the_input_folder --Pretrained_checkp
 ```
 
 
-
-
-
 ##### DNABERT
 To fine-tune the model on our data, you first need to follow the instructions in the [DNABERT repository](https://github.com/jerryji1993/DNABERT) original repository to donwnload the model weights. Place them in the `dnabert` folder and then run the following:
 
@@ -71,6 +68,19 @@ Evaluation:
 
 ###### DNABERT-2
 
+Model Fine-tuning
+To fine-tune the model on our dataset, you need to follow the instructions in [DNABERT2 repository](https://github.com/Zhihan1996/DNABERT_2) for fine-tuning the model on new dataset. You can use the same input path that is used for fine-tuning BarcodeBERT as the input path to DNABERT2. 
+
+Evaluation:
+```
+python MLM_genus_test.py 4
+python MLM_genus_test.py 5
+python MLM_genus_test.py 6
+
+python Linear_probing.py 4
+python Linear_probing.py 5
+python Linear_probing.py 6
+```
 <!--- 
 
 ### Using BarcodeBERT as feature extractor in your own biodiversity analysis:
