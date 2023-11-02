@@ -72,13 +72,7 @@ To fine-tune the model on our dataset, you need to follow the instructions in [D
 
 Evaluation:
 ```
-python MLM_genus_test.py 4
-python MLM_genus_test.py 5
-python MLM_genus_test.py 6
 
-python Linear_probing.py 4
-python Linear_probing.py 5
-python Linear_probing.py 6
 ```
 <!--- 
 
