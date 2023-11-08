@@ -6,7 +6,7 @@ A pre-trained representation from a transformer model for inference on insect DN
 
 0. Clone this repository and install the required libraries
 
-1. Download the [data](https://github.com/jerryji1993/DNABERT)
+1. Download the [data](https://vault.cs.uwaterloo.ca/s/x7gXQKnmRX3GAZm)
 
 ##### CNN model
 Training: 
