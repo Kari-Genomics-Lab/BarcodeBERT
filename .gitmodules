@@ -1,0 +1,3 @@
+[submodule "bzsl/dnabert2"]
+	path = bzsl/dnabert2
+	url = https://github.com/Zhihan1996/DNABERT_2.git
