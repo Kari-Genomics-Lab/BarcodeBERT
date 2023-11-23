@@ -1,0 +1,3 @@
+[submodule "barcodebert/bzsl/models/dnabert2"]
+	path = barcodebert/bzsl/models/dnabert2
+	url = https://github.com/3dlg-hcvc/DNABERT_2.git
