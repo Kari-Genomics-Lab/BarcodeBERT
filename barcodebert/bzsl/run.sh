@@ -96,7 +96,7 @@ if [ $FINETUNE = true ]; then
 
     # Fine-tune DNABERT-2; separate script needs to be run
     if [ $MODEL = "dnabert2" ]; then
-        cd $ROOT/dnabert2/finetune
+        cd $ROOT/barcodebert/bzsl/models/dnabert2/finetune
         python create_dataset.py --input_path "$DATA/res101.mat" --output "$DATA"
         python train.py \
           --model_name_or_path zhihan1996/DNABERT-2-117M \
@@ -124,13 +124,13 @@ if [ $FINETUNE = true ]; then
         
         # generate embeddings for DNABERT-2
         CHECKPOINT="$OUTPUT/finetuning/$MODEL"
-        cd $ROOT/DNA_Embeddings
+        cd $ROOT/barcodebert/bzsl/feature_extraction
         mkdir -p "$OUTPUT/embeddings"
-        python bert_extract_dna_feature.py --input_path "$DATA/res101.mat" --model "$MODEL" --checkpoint "$CHECKPOINT" --output "$EMBEDDINGS"
+        python main.py --input_path "$DATA/res101.mat" --model "$MODEL" --checkpoint "$CHECKPOINT" --output "$EMBEDDINGS"
     
     # Fine-tune BarcodeBERT or DNABERT
     else
-        cd $ROOT/DNA_Embeddings
+        cd $ROOT/barcodebert/bzsl/finetuning
         if [ -n "$CHECKPOINT" ]; then
             python supervised_learning.py --input_path "$DATA/res101.mat" --model "$MODEL" --output_dir "$OUTPUT/finetuning/$MODEL" --n_epoch 12 --checkpoint "$CHECKPOINT" -k $KMER --model-output "$OUTPUT/finetuning/$MODEL/supervised_model.pth"
         else
@@ -143,16 +143,16 @@ if [ $FINETUNE = true ]; then
 else
     EMBEDDINGS="$OUTPUT/embeddings/dna_embeddings_$MODEL.csv"
     mkdir -p "$OUTPUT/embeddings"
-    cd $ROOT/DNA_Embeddings
+    cd $ROOT/barcodebert/bzsl/feature_extraction
     if [ -n "$CHECKPOINT" ]; then
-        python bert_extract_dna_feature.py --input_path "$DATA/res101.mat" --model "$MODEL" --checkpoint "$CHECKPOINT" --output "$EMBEDDINGS" -k "$KMER"
+        python main.py --input_path "$DATA/res101.mat" --model "$MODEL" --checkpoint "$CHECKPOINT" --output "$EMBEDDINGS" -k "$KMER"
     else
-        python bert_extract_dna_feature.py --input_path "$DATA/res101.mat" --model "$MODEL" --output "$EMBEDDINGS" -k "$KMER"
+        python main.py --input_path "$DATA/res101.mat" --model "$MODEL" --output "$EMBEDDINGS" -k "$KMER"
     fi
     HP_OUTPUT="$OUTPUT/results/bzsl_output_$MODEL.json"
 fi
 
 # BZSL tuning
-cd $ROOT/BZSL-Python
+cd $ROOT/barcodebert/bzsl/surrogate_species
 mkdir -p "$OUTPUT/results"
-python Demo.py --datapath "$DATA" --embeddings "$EMBEDDINGS" --tuning --output "$HP_OUTPUT"
+python main.py --datapath "$DATA" --embeddings "$EMBEDDINGS" --tuning --output "$HP_OUTPUT"
