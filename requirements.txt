@@ -1,0 +1,17 @@
+numpy==1.26.0
+pandas==2.1.1
+scipy==1.11.2
+torch==2.0.1
+transformers==4.29.2
+torchtext==0.15.2
+torchvision==0.15.2
+scikit-learn==1.3.0
+einops==0.6.1
+boto3==1.28.51
+botocore==1.31.51
+cmake==3.27.5
+opt-einsum==3.3.0
+peft==0.5.0
+omegaconf==2.3.0
+evaluate==0.4.0
+accelerate==0.23.0
