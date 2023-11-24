@@ -4,7 +4,10 @@ A pre-trained representation from a transformer model for inference on insect DN
 
 ### Reproducing the results from the paper
 
-0. Clone this repository and install the required libraries
+0. Clone this repository and install the required libraries by running
+```shell
+pip install -e .
+```
 
 1. Download the [data](https://vault.cs.uwaterloo.ca/s/x7gXQKnmRX3GAZm)
 
