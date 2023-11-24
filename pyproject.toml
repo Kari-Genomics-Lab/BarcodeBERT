@@ -18,6 +18,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[tool.setuptools]
+packages = ["barcodebert"]
+
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 

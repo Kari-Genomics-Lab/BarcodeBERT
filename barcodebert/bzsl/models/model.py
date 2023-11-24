@@ -5,7 +5,7 @@ import torch
 from torchtext.vocab import build_vocab_from_iterator
 from transformers import AutoModel, AutoTokenizer, BertConfig, BertForMaskedLM
 
-from dnabert.tokenization_dna import DNATokenizer
+from barcodebert.bzsl.models.dnabert.tokenization_dna import DNATokenizer
 from barcodebert.bzsl.models import FinetuneBert
 
 device = torch.device("cuda") if torch.cuda.is_available() else "cpu"

@@ -96,7 +96,7 @@ if [ $FINETUNE = true ]; then
 
     # Fine-tune DNABERT-2; separate script needs to be run
     if [ $MODEL = "dnabert2" ]; then
-        cd $ROOT/barcodebert/bzsl/models/dnabert2/finetune
+        cd $ROOT/models/dnabert2/finetune
         python create_dataset.py --input_path "$DATA/res101.mat" --output "$DATA"
         python train.py \
           --model_name_or_path zhihan1996/DNABERT-2-117M \
@@ -124,13 +124,13 @@ if [ $FINETUNE = true ]; then
         
         # generate embeddings for DNABERT-2
         CHECKPOINT="$OUTPUT/finetuning/$MODEL"
-        cd $ROOT/barcodebert/bzsl/feature_extraction
+        cd $ROOT/feature_extraction
         mkdir -p "$OUTPUT/embeddings"
         python main.py --input_path "$DATA/res101.mat" --model "$MODEL" --checkpoint "$CHECKPOINT" --output "$EMBEDDINGS"
     
     # Fine-tune BarcodeBERT or DNABERT
     else
-        cd $ROOT/barcodebert/bzsl/finetuning
+        cd $ROOT/finetuning
         if [ -n "$CHECKPOINT" ]; then
             python supervised_learning.py --input_path "$DATA/res101.mat" --model "$MODEL" --output_dir "$OUTPUT/finetuning/$MODEL" --n_epoch 12 --checkpoint "$CHECKPOINT" -k $KMER --model-output "$OUTPUT/finetuning/$MODEL/supervised_model.pth"
         else
@@ -143,7 +143,7 @@ if [ $FINETUNE = true ]; then
 else
     EMBEDDINGS="$OUTPUT/embeddings/dna_embeddings_$MODEL.csv"
     mkdir -p "$OUTPUT/embeddings"
-    cd $ROOT/barcodebert/bzsl/feature_extraction
+    cd $ROOT/feature_extraction
     if [ -n "$CHECKPOINT" ]; then
         python main.py --input_path "$DATA/res101.mat" --model "$MODEL" --checkpoint "$CHECKPOINT" --output "$EMBEDDINGS" -k "$KMER"
     else
@@ -153,6 +153,6 @@ else
 fi
 
 # BZSL tuning
-cd $ROOT/barcodebert/bzsl/surrogate_species
+cd $ROOT/surrogate_species
 mkdir -p "$OUTPUT/results"
 python main.py --datapath "$DATA" --embeddings "$EMBEDDINGS" --tuning --output "$HP_OUTPUT"

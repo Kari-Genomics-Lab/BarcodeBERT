@@ -1,3 +1,4 @@
 data/full_dataset.tsv
-
 data/pre_training.tsv
+*.egg-info/
+__pycache__/

@@ -232,7 +232,7 @@ if __name__ == "__main__":
     x_train, y_train, x_val, y_val, barcodes, labels, num_classes = load_data(args)
 
     model, sequence_pipeline = load_model(
-        args, k=args.k, padding=True, classification_head=True, num_classes=num_classes
+        args, k=args.k, classification_head=True, num_classes=num_classes
     )
 
     train_loader, val_loader = construct_dataloader(
