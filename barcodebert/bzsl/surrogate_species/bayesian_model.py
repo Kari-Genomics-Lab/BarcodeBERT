@@ -10,6 +10,7 @@ from barcodebert.bzsl.surrogate_species.utils import DataLoader, perf_calc_acc, 
 
 
 class Model:
+    """Bayesian model for species classification"""
     def __init__(self, opt):
         super().__init__()
 
@@ -315,19 +316,10 @@ class Model:
         k0_range = [0.1, 1]
         k1_range = [10, 25]
         a0_range = [1, 10, 100]
-        b0_range = a0_range
         s_range = [1, 5, 10]
         K_range = [1, 2, 3]
 
-        # Initialization
-        # ss = 0
-        # a0 = 20
-        # b0 = 20
-        # mm = dim + 2
-
         bestH = 0
-        # best_acc_s = 0
-        # best_acc_us = 0
         best_k0 = None
         best_k1 = None
         best_m = None
@@ -364,14 +356,14 @@ class Model:
                                     )
 
                                     ### Prediction phase ###
-                                    ypred_unseen, prob_mat_unseen = self.bayesian_cls_evaluate(
+                                    ypred_unseen, _ = self.bayesian_cls_evaluate(
                                         xtest_unseen, Sig_s, mu_s, v_s, class_id
                                     )
-                                    ypred_seen, prob_mat_seen = self.bayesian_cls_evaluate(
+                                    ypred_seen, _ = self.bayesian_cls_evaluate(
                                         xtest_seen, Sig_s, mu_s, v_s, class_id
                                     )
 
-                                    acc_per_cls_s, acc_per_cls_us, gzsl_seen_acc, gzsl_unseen_acc, H = perf_calc_acc(
+                                    _, _, gzsl_seen_acc, gzsl_unseen_acc, H = perf_calc_acc(
                                         ytest_seen, ytest_unseen, ypred_seen, ypred_unseen, dataloader.label_to_genus
                                     )
                                     print(

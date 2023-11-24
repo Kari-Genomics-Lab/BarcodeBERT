@@ -9,7 +9,7 @@ import os
 """Data loading part"""
 
 
-class DataLoader(object):
+class DataLoader:
     def __init__(
         self, datapath, dataset, side_info="original", tuning=False, alignment=True, embeddings=None, use_genus=False
     ):
