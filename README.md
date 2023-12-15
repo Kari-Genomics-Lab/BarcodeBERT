@@ -1,6 +1,19 @@
 # BarcodeBERT
 
-A pre-trained representation from a transformer model for inference on insect DNA barcoding data.
+A pre-trained transformer model for inference on insect DNA barcoding data.  
+<p align="center">
+  <img src ="Figures/Arch.png" alt="drawing" width="500"/>
+</p>
+
+* Check out our [paper](https://arxiv.org/abs/2311.02401)
+* Check out our [poster](https://vault.cs.uwaterloo.ca/s/iixEfyeXMt8g3pi)
+
+#### Model weights
+
+[4-mers](https://vault.cs.uwaterloo.ca/s/5XdqgegTC6xe2yQ)  
+[5-mers](https://vault.cs.uwaterloo.ca/s/Cb6yzBpPdHQzjzg)  
+[6-mers](https://vault.cs.uwaterloo.ca/s/GCfZdeZEDCcdSNf)  
+
 
 ### Reproducing the results from the paper
 
@@ -66,17 +79,28 @@ python supervised_learning.py --input_path=../../data -k 6 --model dnabert --che
 python supervised_learning.py --input_path=../../data -k 5 --model dnabert --checkpoint dnabert/5-new-12w-0
 ```
 
-Evaluation:
-
 
 ###### DNABERT-2
 
 To fine-tune the model on our dataset, you need to follow the instructions in [DNABERT2 repository](https://github.com/Zhihan1996/DNABERT_2) for fine-tuning the model on new dataset. You can use the same input path that is used for fine-tuning BarcodeBERT as the input path to DNABERT2. 
 
-Evaluation:
-```
 
-```
+## Citation 
+
+If you find BarcodeBERT useful in your research please consider citing:
+
+	@misc{arias2023barcodebert,
+      title={BarcodeBERT: Transformers for Biodiversity Analysis}, 
+      author={Pablo Millan Arias and Niousha Sadjadi and Monireh Safari and ZeMing Gong and Austin T. Wang and Scott C. Lowe and Joakim Bruslund Haurum and Iuliia Zarubiieva and Dirk Steinke and Lila Kari and Angel X. Chang and Graham W. Taylor},
+      year={2023},
+      eprint={2311.02401},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+		
+	
+
+
 <!--- 
 
 ### Using BarcodeBERT as feature extractor in your own biodiversity analysis:

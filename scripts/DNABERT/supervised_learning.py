@@ -9,8 +9,7 @@ from tqdm import tqdm
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from model import load_model
-from bert_extract_dna_feature import extract_clean_barcode_list, extract_clean_barcode_list_for_aligned
-from pablo_bert_with_prediction_head import train_and_eval
+from bert_with_prediction_head import train_and_eval
 from torch.utils.data import DataLoader, Dataset
 import pandas as pd 
 
