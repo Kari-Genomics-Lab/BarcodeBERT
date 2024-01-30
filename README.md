@@ -1,4 +1,4 @@
-# BarcodeBERT (Soft Levenshtein Penalty)
+# BarcodeBERT
 
 A pre-trained transformer model for inference on insect DNA barcoding data. 
 
