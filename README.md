@@ -2,31 +2,6 @@
 
 A pre-trained transformer model for inference on insect DNA barcoding data. 
 
-Model Pretraining:
-```
-cd /scripts/soft_BarcodeBERT
-pip install --no-index -r requirements.txt
-python soft_MGPU_MLM_train.py --input_path=[DATA-FOLDER]/pre_training.tsv --k_mer=4 --stride=4 --epoch=20 --n_layers=2 --n_heads=2
-
-```
-
-Evaluation:
-```
-python soft_knn_probing.py --input_path=[DATA-FOLDER] --Pretrained_checkpoint_path=[CHECKPOINTS-FOLDER]/4_soft_model_2_2_20.pth  --k_mer=4 --stride=4 --n_layers=2 --n_heads=2
-python soft_linear_probing.py --input_path=[DATA-FOLDER]--Pretrained_checkpoint_path=[CHECKPOINTS-FOLDER]/4_soft_model_2_2_20.pth  --k_mer=4 --stride=4 --n_layers=2 --n_heads=2
-
-```
-
-Model Fine-tuning
-To fine-tune the model, you need a folder with three files: "train," "test," and "dev." Each file should have two columns, one called "sequence" and the other called "label." You also need to specify the path to the pre-trained model you want to use for fine-tuning, using "pretrained_checkpoint_path".
-```
-python soft_fine_tuning.py --input_path=[DATA-FOLDER] --Pretrained_checkpoint_path=[CHECKPOINTS-FOLDER]/4_soft_model_2_2_20.pth  --k_mer=4 --stride=4 --epoch=35 --n_layers=2 --n_heads=2
-```
-
-
-
-
-
 <p align="center">
   <img src ="Figures/Arch.png" alt="drawing" width="500"/>
 </p>
