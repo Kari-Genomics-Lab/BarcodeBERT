@@ -17,5 +17,5 @@ seaborn
 torch==2.0.1
 torchtext==0.15.2
 torchvision==0.15.2
-transformers==4.29.2
+transformers==4.30.0
 umap-learn==0.5.3
