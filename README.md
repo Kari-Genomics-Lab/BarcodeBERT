@@ -97,9 +97,9 @@ If you find BarcodeBERT useful in your research please consider citing:
       eprint={2311.02401},
       archivePrefix={arXiv},
       primaryClass={cs.LG}
-}
-		
-	
+    }
+
+
 
 
 <!--- 
