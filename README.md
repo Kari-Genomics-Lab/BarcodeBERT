@@ -102,7 +102,8 @@ If you find BarcodeBERT useful in your research please consider citing:
       year={2023},
       eprint={2311.02401},
       archivePrefix={arXiv},
-      primaryClass={cs.LG}
+      primaryClass={cs.LG},
+      doi={10.48550/arxiv.2311.02401},
     }
 
 
