@@ -49,7 +49,6 @@ python 1D_CNN_Linear_probing.py
 Model Pretraining:
 ```
 cd scripts/BarcodeBERT/
-pip install --no-index -r requirements.txt
 python MGPU_MLM_train.py --input_path=../../data/pre_training.tsv --k_mer=4 --stride=4
 python MGPU_MLM_train.py --input_path=../../data/pre_training.tsv --k_mer=5 --stride=5
 python MGPU_MLM_train.py --input_path=../../data/pre_training.tsv --k_mer=6 --stride=6
@@ -80,7 +79,6 @@ To fine-tune the model on our data, you first need to follow the instructions in
 
 ```
 cd scripts/DNABERT/
-pip install --no-index -r requirements.txt
 python supervised_learning.py --input_path=../../data -k 4 --model dnabert --checkpoint dnabert/4-new-12w-0
 python supervised_learning.py --input_path=../../data -k 6 --model dnabert --checkpoint dnabert/6-new-12w-0
 python supervised_learning.py --input_path=../../data -k 5 --model dnabert --checkpoint dnabert/5-new-12w-0
