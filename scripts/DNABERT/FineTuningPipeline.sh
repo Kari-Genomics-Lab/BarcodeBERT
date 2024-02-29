@@ -13,10 +13,10 @@ source $SLURM_TMPDIR/env/bin/activate
 
 #Install all libraries
 
-cd /home/pmillana/bioscan/paper/DNABERT
+cd /home/pmillana/bioscan/
 pip install --no-index -r requirements.txt
 echo 'Libraries Installed'
-
+cd scripts/DNABERT/
 
 #python supervised_learning.py --input_path=../../data -k 4 --model dnabert --checkpoint dnabert/4-new-12w-0
 

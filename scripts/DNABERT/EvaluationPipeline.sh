@@ -1,4 +1,4 @@
-pip install --no-index -r requirements.txt
+pip install --no-index -r ../../requirements.txt
 echo 'Libraries Installed'
 
 
