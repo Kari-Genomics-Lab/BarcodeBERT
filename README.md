@@ -96,7 +96,7 @@ To fine-tune the model on our dataset, you need to follow the instructions in [D
 
 If you find BarcodeBERT useful in your research please consider citing:
 
-	@misc{arias2023barcodebert,
+    @misc{arias2023barcodebert,
       title={{BarcodeBERT}: Transformers for Biodiversity Analysis},
       author={Pablo Millan Arias and Niousha Sadjadi and Monireh Safari and ZeMing Gong and Austin T. Wang and Scott C. Lowe and Joakim Bruslund Haurum and Iuliia Zarubiieva and Dirk Steinke and Lila Kari and Angel X. Chang and Graham W. Taylor},
       year={2023},
