@@ -24,6 +24,13 @@ pip install -e .
 ```
 
 1. Download the [data](https://vault.cs.uwaterloo.ca/s/x7gXQKnmRX3GAZm)
+```shell
+wget https://vault.cs.uwaterloo.ca/s/x7gXQKnmRX3GAZm/download -O data.zip
+unzip data.zip
+mv new_data/* data/
+rm -r new_data
+rm data.zip
+```
 
 ##### CNN model
 Training: 
