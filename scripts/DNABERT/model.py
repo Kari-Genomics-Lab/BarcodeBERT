@@ -6,7 +6,7 @@ from torchtext.vocab import build_vocab_from_iterator
 from transformers import AutoModel, AutoTokenizer, BertConfig, BertForMaskedLM
 
 from dnabert.tokenization_dna import DNATokenizer
-from pablo_bert_with_prediction_head import Bert_With_Prediction_Head
+from bert_with_prediction_head import Bert_With_Prediction_Head
 
 device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 
