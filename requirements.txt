@@ -1,5 +1,5 @@
 accelerate==0.23.0
-black==23.11.0
+black==24.3.0
 boto3==1.28.51
 botocore==1.31.51
 cmake==3.27.5
