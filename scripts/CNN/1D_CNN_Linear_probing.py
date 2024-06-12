@@ -18,8 +18,8 @@ plt.rcParams['font.family'] = 'Times New Roman'
 from sklearn.model_selection import train_test_split
 import umap
 
-train = pd.read_csv("../new_data/supervised_train.csv", sep=None)
-test = pd.read_csv("../new_data/supervised_test.csv", sep=None)
+train = pd.read_csv("../data/supervised_train.csv", sep=None)
+test = pd.read_csv("../data/supervised_test.csv", sep=None)
 
 target_level='species_name'
 

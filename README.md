@@ -24,26 +24,32 @@ pip install -e .
 ```
 
 1. Download the [data](https://vault.cs.uwaterloo.ca/s/x7gXQKnmRX3GAZm)
+```shell
+wget https://vault.cs.uwaterloo.ca/s/x7gXQKnmRX3GAZm/download -O data.zip
+unzip data.zip
+mv new_data/* data/
+rm -r new_data
+rm data.zip
+```
 
 ##### CNN model
 Training: 
 ```
-cd paper/CNN
-python supervised_learning.py
+cd scripts/CNN/
+python 1D_CNN_supervised.py
 ```
 
 Evaluation:
 ```
-python genus_1NN.py
-python Linear_probing.py
+python 1D_CNN_genus.py
+python 1D_CNN_Linear_probing.py
 ```
 
 ##### BarcodeBERT
 
 Model Pretraining:
 ```
-cd /paper/BarcodeBERT
-pip install --no-index -r requirements.txt
+cd scripts/BarcodeBERT/
 python MGPU_MLM_train.py --input_path=../../data/pre_training.tsv --k_mer=4 --stride=4
 python MGPU_MLM_train.py --input_path=../../data/pre_training.tsv --k_mer=5 --stride=5
 python MGPU_MLM_train.py --input_path=../../data/pre_training.tsv --k_mer=6 --stride=6
@@ -63,9 +69,9 @@ python Linear_probing.py 6
 Model Fine-tuning
 To fine-tune the model, you need a folder with three files: "train," "test," and "dev." Each file should have two columns, one called "sequence" and the other called "label." You also need to specify the path to the pre-trained model you want to use for fine-tuning, using "pretrained_checkpoint_path".
 ```
-python fine_tuning.py --input_path= path_to_the_input_folder --Pretrained_checkpoint_path path_to_the_pretrained_model  --k_mer=4 --stride=4
-python fine_tuning.py --input_path= path_to_the_input_folder --Pretrained_checkpoint_path path_to_the_pretrained_model  --k_mer=5 --stride=5
-python fine_tuning.py --input_path= path_to_the_input_folder --Pretrained_checkpoint_path path_to_the_pretrained_model  --k_mer=6 --stride=6
+python Fine-tuning.py --input_path=path_to_the_input_folder --Pretrained_checkpoint_path path_to_the_pretrained_model --k_mer=4 --stride=4
+python Fine_tuning.py --input_path=path_to_the_input_folder --Pretrained_checkpoint_path path_to_the_pretrained_model --k_mer=5 --stride=5
+python Fine_tuning.py --input_path=path_to_the_input_folder --Pretrained_checkpoint_path path_to_the_pretrained_model --k_mer=6 --stride=6
 ```
 
 
@@ -73,8 +79,7 @@ python fine_tuning.py --input_path= path_to_the_input_folder --Pretrained_checkp
 To fine-tune the model on our data, you first need to follow the instructions in the [DNABERT repository](https://github.com/jerryji1993/DNABERT) original repository to donwnload the model weights. Place them in the `dnabert` folder and then run the following:
 
 ```
-cd paper/DNABERT
-pip install --no-index -r requirements.txt
+cd scripts/DNABERT/
 python supervised_learning.py --input_path=../../data -k 4 --model dnabert --checkpoint dnabert/4-new-12w-0
 python supervised_learning.py --input_path=../../data -k 6 --model dnabert --checkpoint dnabert/6-new-12w-0
 python supervised_learning.py --input_path=../../data -k 5 --model dnabert --checkpoint dnabert/5-new-12w-0
@@ -90,16 +95,29 @@ To fine-tune the model on our dataset, you need to follow the instructions in [D
 
 If you find BarcodeBERT useful in your research please consider citing:
 
-	@misc{arias2023barcodebert,
-      title={BarcodeBERT: Transformers for Biodiversity Analysis}, 
-      author={Pablo Millan Arias and Niousha Sadjadi and Monireh Safari and ZeMing Gong and Austin T. Wang and Scott C. Lowe and Joakim Bruslund Haurum and Iuliia Zarubiieva and Dirk Steinke and Lila Kari and Angel X. Chang and Graham W. Taylor},
+    @misc{arias2023barcodebert,
+      title={{BarcodeBERT}: Transformers for Biodiversity Analysis},
+      author={Pablo Millan Arias
+        and Niousha Sadjadi
+        and Monireh Safari
+        and ZeMing Gong
+        and Austin T. Wang
+        and Scott C. Lowe
+        and Joakim Bruslund Haurum
+        and Iuliia Zarubiieva
+        and Dirk Steinke
+        and Lila Kari
+        and Angel X. Chang
+        and Graham W. Taylor
+      },
       year={2023},
       eprint={2311.02401},
       archivePrefix={arXiv},
-      primaryClass={cs.LG}
-}
-		
-	
+      primaryClass={cs.LG},
+      doi={10.48550/arxiv.2311.02401},
+    }
+
+
 
 
 <!--- 

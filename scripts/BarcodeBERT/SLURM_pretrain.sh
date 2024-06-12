@@ -18,8 +18,8 @@ source $SLURM_TMPDIR/env/bin/activate
 
 #Install all libraries
 
-cd /home/pmillana/bioscan/paper/BarcodeBERT
+cd /home/pmillana/bioscan/
 pip install --no-index -r requirements.txt
 echo 'Libraries Installed'
-
+cd scripts/BarcodeBERT
 python MGPU_MLM_train.py --input_path=../../data/pre_training.tsv --k_mer=4 --stride=4 --checkpoint=True
