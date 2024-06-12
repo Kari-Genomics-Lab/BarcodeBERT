@@ -1,0 +1,64 @@
+#!/bin/bash
+#SBATCH --partition=t4v1,t4v2       # Which node partitions to use. Use a comma-separated list if you don't mind which partition: t4v1,t4v2,rtx6000,a40
+#SBATCH --nodes=1                   # Number of nodes to request. Usually use 1 for interactive jobs.
+#SBATCH --tasks-per-node=1          # Number of processes to spawn per node. Should always be set to 1, regardless of number of GPUs!
+#SBATCH --gres=gpu:1                # Number of GPUs per node to request
+#SBATCH --cpus-per-gpu=4            # Number of CPUs to request per GPU (soft maximum of 4 per GPU requested)
+#SBATCH --mem-per-gpu=10G           # RAM per GPU
+#SBATCH --time=16:00:00             # You must specify a maximum run-time if you want to run for more than 2h
+#SBATCH --output=jnb_%j.out         # You'll need to inspect this log file to find out how to connect to the notebook
+#SBATCH --job-name=jnb
+
+
+# Manually define the project name.
+# This should also be the name of your conda environment used for this project.
+PROJECT_NAME="barcodebert"
+
+# Exit if any command hits an error
+set -e
+
+# Store the time at which the script was launched
+start_time="$SECONDS"
+
+echo "Job $SLURM_JOB_NAME ($SLURM_JOB_ID) begins on $(hostname), submitted from $SLURM_SUBMIT_HOST ($SLURM_CLUSTER_NAME)"
+
+# Print slurm config report
+echo "Running slurm/utils/report_slurm_config.sh"
+source "slurm/utils/report_slurm_config.sh"
+
+echo ""
+echo "-------- Activating environment ----------------------------------------"
+date
+echo ""
+echo "Running ~/.bashrc"
+source ~/.bashrc
+
+# Activate virtual environment
+ENVNAME="$PROJECT_NAME"
+echo "Activating environment $ENVNAME"
+conda activate "$ENVNAME"
+echo ""
+
+# We don't want to use a fixed port number (e.g. 8888) because that would lead
+# to collisions between jobs on the same node as each other.
+# Try to use a port number automatically selected from the job id number.
+JOB_SOCKET=$(( $SLURM_JOB_ID % 16384 + 49152 ))
+if ss -tulpn | grep -q ":$JOB_SOCKET ";
+then
+    # The port we selected is in use, so we'll get a random available port instead.
+    JOB_SOCKET="$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1])')";
+fi
+echo "Will use port $JOB_SOCKET to serve the notebook"
+echo ""
+echo "-------- Connection instructions ---------------------------------------"
+echo ""
+echo "You should be able to access the notebook locally with the following commands:"
+echo ""
+echo "ssh ${USER}@v.vectorinstitute.ai -N -L 8887:$(hostname):${JOB_SOCKET}"
+echo "sensible-browser http://localhost:8887"
+echo "# Then enter the token printed below, or your password if you set one"
+echo ""
+echo "-------- Starting jupyter notebook -------------------------------------"
+date
+export XDG_RUNTIME_DIR=""
+python -m jupyter notebook --ip 0.0.0.0 --port "$JOB_SOCKET"

@@ -1,0 +1,314 @@
+#!/bin/bash
+#SBATCH --nodes=1                   # Number of nodes to request. Can increase to --nodes=2, etc, for more GPUs (spread out over different nodes).
+#SBATCH --tasks-per-node=1          # Number of processes to spawn per node. Should always be set to 1, regardless of number of GPUs!
+#SBATCH --gres=gpu:4                # Number of GPUs per node. Can increase to --gres=gpu:2, etc, for more GPUs (together on the same node).
+#SBATCH --cpus-per-gpu=4            # Number of CPUs per GPU. Soft maximum of 4 per GPU requested on t4, 8 otherwise. Hard maximum of 32 per node.
+#SBATCH --mem-per-gpu=10G           # RAM per GPU. Soft maximum of 20G per GPU requested on t4v2, 41G otherwise. Hard maximum of 167G per node.
+#SBATCH --time=0-23:00:00           # Maximum run-time if you want to run for more than 2h
+#SBATCH --signal=B:USR1@120         # Send signal SIGUSR1 120 seconds before the job hits the time limit
+#SBATCH --output=slogs/%x__%A_%a.out
+                                    # %x=job-name, %A=job ID, %a=array value, %n=node rank, %t=task rank, %N=hostname
+                                    # Note: You must create output directory "slogs" before launching job, otherwise it will immediately
+                                    # fail without an error message.
+                                    # Note: If you specify --output and not --error, then both STDOUT and STDERR will both be sent to the
+                                    # file specified by --output.
+#SBATCH --array=0                   # Use array to run multiple jobs that are identical except for $SLURM_ARRAY_TASK_ID.
+                                    # In this example, we use this to set the seed. You can run multiple seeds with --array=0-4, for example.
+#SBATCH --open-mode=append          # Use append mode otherwise preemption resets the checkpoint file.
+#SBATCH --job-name=barcodebert      # Set this to be a shorthand for your project's name.
+
+# Manually define the project name.
+# This must also be the name of your conda environment used for this project.
+PROJECT_NAME="barcodebert"
+# Automatically convert hyphens to underscores, to get the name of the project directory.
+PROJECT_DIRN="${PROJECT_NAME//-/_}"
+
+# Exit the script if any command hits an error
+set -e
+
+# Set up a handler to requeue the job if it hits the time-limit without terminating
+function term_handler()
+{
+    echo "** Job $SLURM_JOB_NAME ($SLURM_JOB_ID) received SIGUSR1 at $(date) **"
+    echo "** Requeuing job $SLURM_JOB_ID so it can run for longer **"
+    scontrol requeue "${SLURM_JOB_ID}"
+}
+# Call this term_hnadler function when the job recieves the SIGUSR1 signal
+trap term_handler SIGUSR1
+
+# Store the time at which the script was launched, so we can measure how long has elapsed.
+start_time="$SECONDS"
+
+echo "Job $SLURM_JOB_NAME ($SLURM_JOB_ID) begins on $(hostname), submitted from $SLURM_SUBMIT_HOST ($SLURM_CLUSTER_NAME)"
+echo ""
+# Print slurm config report (SLURM environment variables, some of which we use later in the script)
+# By sourcing the script, we execute it as if its code were here in the script
+# N.B. This script only prints things out, it doesn't assign any environment variables.
+echo "Running slurm/utils/report_slurm_config.sh"
+source "slurm/utils/report_slurm_config.sh"
+# Print repo status report (current branch, commit ref, where any uncommitted changes are located)
+# N.B. This script only prints things out, it doesn't assign any environment variables.
+echo "Running slurm/utils/report_repo.sh"
+source "slurm/utils/report_repo.sh"
+echo ""
+echo "-------- Input handling ------------------------------------------------"
+date
+echo ""
+# Use the SLURM job array to select the seed for the experiment
+SEED="$SLURM_ARRAY_TASK_ID"
+if [[ "$SEED" == "" ]];
+then
+    SEED=0
+fi
+echo "SEED = $SEED"
+
+# Any arguments provided to sbatch after the name of the slurm script will be
+# passed through to the main script later.
+# (The pass-through works like *args or **kwargs in python.)
+echo "Pass-through args: ${@}"
+echo ""
+echo "-------- Activating environment ----------------------------------------"
+date
+echo ""
+# Setup virtual environment
+echo "Loading modules"
+module load python/3.11 cuda cudnn
+echo ""
+ENVPATH="$SLURM_TMPDIR/env"
+echo "Creating virtual environment $ENVPATH"
+virtualenv --no-download "$ENVPATH"
+source "$ENVPATH/bin/activate"
+echo ""
+echo "Installing package dependencies"
+python -m pip install --no-index -r CC_requirements.txt
+python -m pip install --no-index .
+echo ""
+# Print env status (which packages you have installed - useful for diagnostics)
+# N.B. This script only prints things out, it doesn't assign any environment variables.
+echo "Running slurm/utils/report_env_config.sh"
+source "slurm/utils/report_env_config.sh"
+
+# Set the JOB_LABEL environment variable
+echo "-------- Setting JOB_LABEL ---------------------------------------------"
+echo ""
+# Decide the name of the paths to use for saving this job
+if [ "$SLURM_ARRAY_TASK_COUNT" != "" ] && [ "$SLURM_ARRAY_TASK_COUNT" -gt 1 ];
+then
+    JOB_ID="${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}";
+else
+    JOB_ID="${SLURM_JOB_ID}";
+fi
+# Add a C prefix to indicate it is a Compute Canada cedar cluster job ID
+JOB_ID="Ced$JOB_ID"
+# Decide the name of the paths to use for saving this job
+JOB_LABEL="${SLURM_JOB_NAME}__${JOB_ID}";
+echo "JOB_ID = $JOB_ID"
+echo "JOB_LABEL = $JOB_LABEL"
+echo ""
+
+# Set checkpoint directory ($CKPT_DIR) environment variables
+echo "-------- Setting checkpoint and output path variables ------------------"
+echo ""
+CKPT_DIR="model_checkpoints/$JOB_LABEL"
+echo "CKPT_DIR = $CKPT_DIR"
+CKPT_PTH="$CKPT_DIR/checkpoint_pretraining.pt"
+echo "CKPT_PTH = $CKPT_PTH"
+echo ""
+# Ensure the checkpoint dir exists
+mkdir -p "$CKPT_DIR"
+echo "Current contents of ${CKPT_DIR}:"
+ls -lh "${CKPT_DIR}"
+echo ""
+
+# Save a list of installed packages and their versions to a file in the output directory
+pip freeze > "$CKPT_DIR/frozen-requirements.txt"
+
+if [[ "$SLURM_RESTART_COUNT" > 0 && ! -f "$CKPT_PTH" ]];
+then
+    echo ""
+    echo "====================================================================="
+    echo "SLURM SCRIPT ERROR:"
+    echo "    Resuming after pre-emption (SLURM_RESTART_COUNT=$SLURM_RESTART_COUNT)"
+    echo "    but there is no checkpoint file at $CKPT_PTH"
+    echo "====================================================================="
+    exit 1;
+fi;
+
+echo ""
+echo "------------------------------------"
+elapsed=$(( SECONDS - start_time ))
+eval "echo Running total elapsed time for restart $SLURM_RESTART_COUNT: $(date -ud "@$elapsed" +'$((%s/3600/24)) days %H hr %M min %S sec')"
+echo ""
+echo "-------- Begin main script ---------------------------------------------"
+date
+echo ""
+# Store the master node's IP address in the MASTER_ADDR environment variable,
+# which torch.distributed will use to initialize DDP.
+# following line is only temporarily commented out
+# export MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+
+# This is a temporary fix for CC
+export MASTER_ADDR=localhost
+echo "Rank 0 node is at $MASTER_ADDR"
+
+# Use a port number automatically selected from the job id number.
+# This will let us use the same port for every task in the job without having
+# to create a file to store the port number.
+# We don't want to use a fixed port number because that would lead to
+# collisions between jobs when they are scheduled on the same node.
+# We only use ports in the range 49152-65535 (inclusive), which are the
+# Dynamic Ports, also known as Private Ports.
+MASTER_PORT="$(( $SLURM_JOB_ID % 16384 + 49152 ))"
+if [[ "$SLURM_JOB_NUM_NODES" == "1" ]] && ss -tulpn | grep -q ":$MASTER_PORT ";
+then
+    # We don't need to communicate with other nodes, and the port we selected
+    # is in use, so we'll get a random available port instead.
+    MASTER_PORT="$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1])')";
+fi
+export MASTER_PORT;
+
+# This is a temporary fix for CC
+export MASTER_PORT=12355 #This is a temporary fix for CC
+echo "Will use port $MASTER_PORT for c10d communication"
+
+export WORLD_SIZE="$(($SLURM_NNODES * $SLURM_GPUS_ON_NODE))"
+echo "WORLD_SIZE = $WORLD_SIZE"
+
+# NCCL options ----------------------------------------------------------------
+
+# This is needed to print debug info from NCCL, can be removed if all goes well
+# export NCCL_DEBUG=INFO
+
+# This is needed to avoid NCCL to use ifiniband, which the cluster does not have
+export NCCL_IB_DISABLE=1
+
+# Set this when using the NCCL backend for inter-GPU communication.
+export TORCH_NCCL_BLOCKING_WAIT=1
+# -----------------------------------------------------------------------------
+
+# Multi-GPU configuration
+echo ""
+echo "Main script begins via torchrun with host tcp://${MASTER_ADDR}:$MASTER_PORT with backend NCCL"
+if [[ "$SLURM_JOB_NUM_NODES" == "1" ]];
+then
+    echo "Single ($SLURM_JOB_NUM_NODES) node training ($SLURM_GPUS_ON_NODE GPUs)"
+else
+    echo "Multiple ($SLURM_JOB_NUM_NODES) node training (x$SLURM_GPUS_ON_NODE GPUs per node)"
+fi
+echo ""
+
+# We use the torchrun command to launch our main python script.
+# It will automatically set up the necessary environment variables for DDP,
+# and will launch the script once for each GPU on each node.
+#
+# We pass the CKPT_DIR environment variable on as the output path for our
+# python script, and also try to resume from a checkpoint in this directory
+# in case of pre-emption. The python script should run from scratch if there
+# is no checkpoint at this path to resume from.
+#
+# We pass on to train.py an arary of arbitrary extra arguments given to this
+# slurm script contained in the `$@` magic variable.
+#
+# We execute the srun command in the background with `&` (and then check its
+# process ID and wait for it to finish before continuing) so the main process
+# can handle the SIGUSR1 signal. Otherwise if a child process is running, the
+# signal will be ignored.
+
+# Run the SSL pretraining script first.
+echo ""
+echo "~~~~~~~~ SLURM scirpt begins pretraining step ~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+date
+echo ""
+srun -N "$SLURM_NNODES" --ntasks-per-node=1 \
+    torchrun \
+    --nnodes="$SLURM_JOB_NUM_NODES" \
+    --nproc_per_node="$SLURM_GPUS_ON_NODE" \
+    --rdzv_id="$SLURM_JOB_ID" \
+    --rdzv_backend=c10d \
+    --rdzv_endpoint="$MASTER_ADDR:$MASTER_PORT" \
+    "$PROJECT_DIRN/pretraining.py" \
+    --cpu-workers="$SLURM_CPUS_PER_GPU" \
+    --data-dir="$PROJECT_DIRN/../data" \
+    --seed="$SEED" \
+    --checkpoint="$CKPT_PTH" \
+    --log-wandb \
+    --run-name="$SLURM_JOB_NAME" \
+    --run-id="$JOB_ID" \
+    "${@}" &
+child="$!"
+wait "$child"
+
+# Run the finetuning script on the pretrained model.
+echo ""
+echo "~~~~~~~~ SLURM scirpt begins finetuning step ~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+date
+echo ""
+srun -N "$SLURM_NNODES" --ntasks-per-node=1 \
+    torchrun \
+    --nnodes="$SLURM_JOB_NUM_NODES" \
+    --nproc_per_node="$SLURM_GPUS_ON_NODE" \
+    --rdzv_id="$SLURM_JOB_ID" \
+    --rdzv_backend=c10d \
+    --rdzv_endpoint="$MASTER_ADDR:$MASTER_PORT" \
+    "$PROJECT_DIRN/finetuning.py" \
+    --cpu-workers="$SLURM_CPUS_PER_GPU" \
+    --seed="$SEED" \
+    --pretrained-checkpoint="$CKPT_PTH" \
+    --checkpoint="$CKPT_DIR/checkpoint_finetune.pt" \
+    --log-wandb \
+    --run-name="$SLURM_JOB_NAME" \
+    --run-id="ft_$JOB_ID" \
+    "${@}" &
+child="$!"
+wait "$child"
+
+# Run the linear probe on the pretrained model.
+echo ""
+echo "~~~~~~~~ SLURM scirpt begins linear probe step ~~~~~~~~~~~~~~~~~~~~~~~~~"
+date
+echo ""
+srun -N "$SLURM_NNODES" --ntasks-per-node=1 \
+    torchrun \
+    --nnodes="$SLURM_JOB_NUM_NODES" \
+    --nproc_per_node="$SLURM_GPUS_ON_NODE" \
+    --rdzv_id="$SLURM_JOB_ID" \
+    --rdzv_backend=c10d \
+    --rdzv_endpoint="$MASTER_ADDR:$MASTER_PORT" \
+    "$PROJECT_DIRN/finetuning.py" \
+    --cpu-workers="$SLURM_CPUS_PER_GPU" \
+    --seed="$SEED" \
+    --pretrained-checkpoint="$CKPT_PTH" \
+    --checkpoint="$CKPT_DIR/checkpoint_linearprobe.pt" \
+    --freeze-encoder \
+    --log-wandb \
+    --run-name="$SLURM_JOB_NAME" \
+    --run-id="lp_$JOB_ID" \
+    "${@}" &
+child="$!"
+wait "$child"
+
+# Run kNN on the pretrained model.
+echo ""
+echo "~~~~~~~~ SLURM scirpt begins kNN step ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+date
+echo ""
+python "$PROJECT_DIRN/knn_probing.py" \
+    --cpu-workers="$SLURM_CPUS_PER_GPU" \
+    --seed="$SEED" \
+    --pretrained-checkpoint="$CKPT_PTH" \
+    --log-wandb \
+    --run-name="SLURM_JOB_NAME" \
+    --run-id="knn_$JOB_ID" \
+    "${@}" &
+child="$!"
+wait "$child"
+
+echo ""
+echo "------------------------------------------------------------------------"
+echo ""
+echo "Job $SLURM_JOB_NAME ($SLURM_JOB_ID) finished, submitted from $SLURM_SUBMIT_HOST ($SLURM_CLUSTER_NAME)"
+date
+echo "------------------------------------"
+elapsed=$(( SECONDS - start_time ))
+eval "echo Total elapsed time for restart $SLURM_RESTART_COUNT: $(date -ud "@$elapsed" +'$((%s/3600/24)) days %H hr %M min %S sec')"
+echo "========================================================================"

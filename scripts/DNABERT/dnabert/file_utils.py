@@ -157,11 +157,14 @@ def hf_bucket_url(identifier, postfix=None, cdn=False) -> str:
 def url_to_filename(url, etag=None):
     """
     Convert `url` into a hashed filename in a repeatable way.
+
     If `etag` is specified, append its hash to the url's, delimited
     by a period.
     If the url ends with .h5 (Keras HDF5 weights) adds '.h5' to the name
     so that TF 2.0 can identify it as a HDF5 file
-    (see https://github.com/tensorflow/tensorflow/blob/00fad90125b18b80fe054de1055770cfb8fe4ba3/tensorflow/python/keras/engine/network.py#L1380)
+    (see
+    https://github.com/tensorflow/tensorflow/blob/00fad90125b18b80fe054de1055770cfb8fe4ba3/tensorflow/python/keras/engine/network.py#L1380
+    )
     """
     url_bytes = url.encode("utf-8")
     url_hash = sha256(url_bytes)
@@ -460,7 +463,7 @@ def get_from_cache(
             # GET file object
             if url.startswith("s3://"):
                 if resume_download:
-                    logger.warn('Warning: resumable downloads are not implemented for "s3://" urls')
+                    logger.warning('Warning: resumable downloads are not implemented for "s3://" urls')
                 s3_get(url, temp_file, proxies=proxies)
             else:
                 http_get(url, temp_file, proxies=proxies, resume_size=resume_size, user_agent=user_agent)

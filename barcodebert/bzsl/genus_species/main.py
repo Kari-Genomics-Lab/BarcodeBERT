@@ -1,5 +1,4 @@
 import argparse
-import os
 import time
 import traceback
 from typing import Optional
@@ -7,14 +6,13 @@ from typing import Optional
 import numpy as np
 import torch
 
-from barcodebert.bzsl.genus_species.bayesian_classifier import apply_pca, BayesianClassifier, calculate_priors
-from barcodebert.bzsl.genus_species.dataset import load_data, get_data_splits
+from barcodebert.bzsl.genus_species.bayesian_classifier import (
+    BayesianClassifier, apply_pca, calculate_priors)
+from barcodebert.bzsl.genus_species.dataset import get_data_splits, load_data
 
 
 def normalize(embeddings: np.ndarray):
-    return (embeddings - np.mean(embeddings, axis=1, keepdims=True)) / np.std(
-        embeddings, axis=1, ddof=1, keepdims=True
-    )
+    return (embeddings - np.mean(embeddings, axis=1, keepdims=True)) / np.std(embeddings, axis=1, ddof=1, keepdims=True)
 
 
 def ridge_regression(embeddings_dna: np.ndarray, embeddings_img: np.ndarray, rho: int):
@@ -74,7 +72,7 @@ def tune_hyperparameters(
 ):
     if model == "OSBC_DIC":
         # in order to add support, we would either need to tune parameters separately for each model or tune the same
-        # set of parameters for both models. The former could be achieved by tuning OSBC_DNA and OSBC_IMG, but the 
+        # set of parameters for both models. The former could be achieved by tuning OSBC_DNA and OSBC_IMG, but the
         # latter would double the tuning time and so would be computationally burdensome.
         raise NotImplementedError("Hyperparameter tuning is not yet supported for DIC.")
 
@@ -129,7 +127,7 @@ def tune_hyperparameters(
                             best_k_1 = k_1
                             best_m = m
                             best_s = s
-                    except torch.linalg.LinAlgError as e:
+                    except torch.linalg.LinAlgError:
                         traceback.print_exc()
 
     print("-----------")

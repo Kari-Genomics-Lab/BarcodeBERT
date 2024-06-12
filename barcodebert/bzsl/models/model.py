@@ -5,8 +5,8 @@ import torch
 from torchtext.vocab import build_vocab_from_iterator
 from transformers import AutoModel, AutoTokenizer, BertConfig, BertForMaskedLM
 
-from barcodebert.bzsl.models.dnabert.tokenization_dna import DNATokenizer
 from barcodebert.bzsl.models import FinetuneBert
+from barcodebert.bzsl.models.dnabert.tokenization_dna import DNATokenizer
 
 device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 
@@ -92,9 +92,7 @@ def get_dnabert_encoder(tokenizer, max_len: int, k: int = 6):
     return dnabert_encoder
 
 
-def load_model(
-    args, *, k: int = 6, classification_head: bool = False, num_classes: Optional[int] = None
-):
+def load_model(args, *, k: int = 6, classification_head: bool = False, num_classes: Optional[int] = None):
     kmer_iter = (["".join(kmer)] for kmer in product("ACGT", repeat=k))
     vocab = build_vocab_from_iterator(kmer_iter, specials=["<MASK>", "<CLS>", "<UNK>"])
     vocab.set_default_index(vocab["<UNK>"])

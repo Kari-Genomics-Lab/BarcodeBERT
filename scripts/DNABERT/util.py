@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 
 
 def construct_dataloader(X_train, X_val, y_train, y_val, batch_size):
@@ -28,13 +28,13 @@ class KmerTokenizer(object):
         tokens = []
         if self.padding:
             if len(dna_sequence) > self.max_len:
-                x = dna_sequence[:self.max_len]
+                x = dna_sequence[: self.max_len]
             else:
-                x = dna_sequence + 'N' * (self.max_len - len(dna_sequence))
+                x = dna_sequence + "N" * (self.max_len - len(dna_sequence))
         else:
             x = dna_sequence
 
         for i in range(0, len(x) - self.k + 1, self.stride):
-            k_mer = x[i:i + self.k]
+            k_mer = x[i : i + self.k]
             tokens.append(k_mer)
         return self.vocabulary_mapper(tokens)

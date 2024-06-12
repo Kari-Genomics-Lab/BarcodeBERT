@@ -18,44 +18,40 @@
 import collections
 import logging
 import os
-import math
 import unicodedata
 
-
-from .tokenization_utils import PreTrainedTokenizer, PreTrainedTokenizerFast
-
+from .tokenization_utils import PreTrainedTokenizer
 
 logger = logging.getLogger(__name__)
 
 VOCAB_FILES_NAMES = {"vocab_file": "vocab.txt"}
 
 
+PRETRAINED_VOCAB_FILES_MAP = {
+    "vocab_file": {
+        "dna3": "https://raw.githubusercontent.com/jerryji1993/DNABERT/master/src/transformers/dnabert-config/bert-config-3/vocab.txt",
+        "dna4": "https://raw.githubusercontent.com/jerryji1993/DNABERT/master/src/transformers/dnabert-config/bert-config-4/vocab.txt",
+        "dna5": "https://raw.githubusercontent.com/jerryji1993/DNABERT/master/src/transformers/dnabert-config/bert-config-5/vocab.txt",
+        "dna6": "https://raw.githubusercontent.com/jerryji1993/DNABERT/master/src/transformers/dnabert-config/bert-config-6/vocab.txt",
+    }
+}
 
 
-PRETRAINED_VOCAB_FILES_MAP = {"vocab_file": {"dna3": "https://raw.githubusercontent.com/jerryji1993/DNABERT/master/src/transformers/dnabert-config/bert-config-3/vocab.txt",
-                                             "dna4": "https://raw.githubusercontent.com/jerryji1993/DNABERT/master/src/transformers/dnabert-config/bert-config-4/vocab.txt",
-                                             "dna5": "https://raw.githubusercontent.com/jerryji1993/DNABERT/master/src/transformers/dnabert-config/bert-config-5/vocab.txt",
-                                             "dna6": "https://raw.githubusercontent.com/jerryji1993/DNABERT/master/src/transformers/dnabert-config/bert-config-6/vocab.txt"}}
-
-
-
-PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-                                          "dna3": 512,
-                                          "dna4": 512,
-                                          "dna5": 512,
-                                          "dna6": 512}
+PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {"dna3": 512, "dna4": 512, "dna5": 512, "dna6": 512}
 
 PRETRAINED_INIT_CONFIGURATION = {
     "dna3": {"do_lower_case": False},
     "dna4": {"do_lower_case": False},
     "dna5": {"do_lower_case": False},
-    "dna6": {"do_lower_case": False}}
+    "dna6": {"do_lower_case": False},
+}
 
 VOCAB_KMER = {
     "69": "3",
     "261": "4",
     "1029": "5",
-    "4101": "6",}
+    "4101": "6",
+}
 
 
 def load_vocab(vocab_file):
@@ -98,7 +94,6 @@ class DNATokenizer(PreTrainedTokenizer):
     pretrained_init_configuration = PRETRAINED_INIT_CONFIGURATION
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
 
-
     def __init__(
         self,
         vocab_file,
@@ -110,7 +105,7 @@ class DNATokenizer(PreTrainedTokenizer):
         cls_token="[CLS]",
         mask_token="[MASK]",
         tokenize_chinese_chars=True,
-        **kwargs
+        **kwargs,
     ):
         """Constructs a BertTokenizer.
 
@@ -149,8 +144,8 @@ class DNATokenizer(PreTrainedTokenizer):
         self.kmer = VOCAB_KMER[str(len(self.vocab))]
         self.ids_to_tokens = collections.OrderedDict([(ids, tok) for tok, ids in self.vocab.items()])
         self.basic_tokenizer = BasicTokenizer(
-                do_lower_case=do_lower_case, never_split=never_split, tokenize_chinese_chars=tokenize_chinese_chars
-            )
+            do_lower_case=do_lower_case, never_split=never_split, tokenize_chinese_chars=tokenize_chinese_chars
+        )
 
     @property
     def vocab_size(self):
@@ -159,12 +154,12 @@ class DNATokenizer(PreTrainedTokenizer):
     def _tokenize(self, text):
         split_tokens = []
         for token in self.basic_tokenizer.tokenize(text, never_split=self.all_special_tokens):
-                split_tokens.append(token)
+            split_tokens.append(token)
         # print(split_tokens)
         return split_tokens
 
     def _convert_token_to_id(self, token):
-        """ Converts a token (str) in an id using the vocab. """
+        """Converts a token (str) in an id using the vocab."""
         return self.vocab.get(token, self.vocab.get(self.unk_token))
 
     def _convert_id_to_token(self, index):
@@ -172,7 +167,7 @@ class DNATokenizer(PreTrainedTokenizer):
         return self.ids_to_tokens.get(index, self.unk_token)
 
     def convert_tokens_to_string(self, tokens):
-        """ Converts a sequence of tokens (string) in a single string. """
+        """Converts a sequence of tokens (string) in a single string."""
         out_string = " ".join(tokens).replace(" ##", "").strip()
         return out_string
 
@@ -192,9 +187,9 @@ class DNATokenizer(PreTrainedTokenizer):
                 return cls + token_ids_0 + sep
             else:
                 output = []
-                num_pieces = int(len(token_ids_0)//510) + 1
+                num_pieces = int(len(token_ids_0) // 510) + 1
                 for i in range(num_pieces):
-                    output.extend(cls + token_ids_0[510*i:min(len(token_ids_0), 510*(i+1))] + sep)
+                    output.extend(cls + token_ids_0[510 * i : min(len(token_ids_0), 510 * (i + 1))] + sep)
                 return output
 
         return cls + token_ids_0 + sep + token_ids_1 + sep
@@ -221,18 +216,18 @@ class DNATokenizer(PreTrainedTokenizer):
                     "You should not supply a second sequence if the provided sequence of "
                     "ids is already formated with special tokens for the model."
                 )
-            return list(map(lambda x: 1 if x in [self.sep_token_id, self.cls_token_id] else 0, token_ids_0))
+            return [1 if x in [self.sep_token_id, self.cls_token_id] else 0 for x in token_ids_0]
 
         if token_ids_1 is not None:
             return [1] + ([0] * len(token_ids_0)) + [1] + ([0] * len(token_ids_1)) + [1]
-        
+
         if len(token_ids_0) < 510:
             return [1] + ([0] * len(token_ids_0)) + [1]
         else:
             output = []
-            num_pieces = int(len(token_ids_0)//510) + 1
+            num_pieces = int(len(token_ids_0) // 510) + 1
             for i in range(num_pieces):
-                output.extend([1] + ([0] * (min(len(token_ids_0), 510*(i+1))-510*i)) + [1])
+                output.extend([1] + ([0] * (min(len(token_ids_0), 510 * (i + 1)) - 510 * i)) + [1])
             return output
             return [1] + ([0] * len(token_ids_0)) + [1]
 
@@ -251,8 +246,8 @@ class DNATokenizer(PreTrainedTokenizer):
             if len(token_ids_0) < 510:
                 return len(cls + token_ids_0 + sep) * [0]
             else:
-                num_pieces = int(len(token_ids_0)//510) + 1
-                return (len(cls + token_ids_0 + sep) + 2*(num_pieces-1)) * [0]
+                num_pieces = int(len(token_ids_0) // 510) + 1
+                return (len(cls + token_ids_0 + sep) + 2 * (num_pieces - 1)) * [0]
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, vocab_path):
@@ -279,7 +274,7 @@ class BasicTokenizer(object):
     """Runs basic tokenization (punctuation splitting, lower casing, etc.)."""
 
     def __init__(self, do_lower_case=False, never_split=None, tokenize_chinese_chars=True):
-        """ Constructs a BasicTokenizer.
+        """Constructs a BasicTokenizer.
 
         Args:
             **do_lower_case**: Whether to lower case the input.
@@ -299,7 +294,7 @@ class BasicTokenizer(object):
         self.tokenize_chinese_chars = tokenize_chinese_chars
 
     def tokenize(self, text, never_split=None):
-        """ Basic Tokenization of a piece of text.
+        """Basic Tokenization of a piece of text.
             Split on "white spaces" only, for sub-word tokenization, see WordPieceTokenizer.
 
         Args:
@@ -358,8 +353,6 @@ class BasicTokenizer(object):
             i += 1
 
         return ["".join(x) for x in output]
-
-
 
     def _clean_text(self, text):
         """Performs invalid character removal and whitespace cleanup on text."""

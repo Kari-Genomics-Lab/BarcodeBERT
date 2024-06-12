@@ -1,9 +1,6 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from opt_einsum.backends import torch
-from torch import optim
-import torch
-import numpy as np
 from torch.optim.lr_scheduler import StepLR
 from tqdm import tqdm
 
@@ -56,7 +53,7 @@ def remove_extra_pre_fix(state_dict):
 
 
 def train_and_eval(model, trainloader, testloader, device, lr=0.0025, n_epoch=12):
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
     # criterion = categorical_cross_entropy()
     # optimizer = optim.Adam(model.parameters(), lr=lr)
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
@@ -67,8 +64,8 @@ def train_and_eval(model, trainloader, testloader, device, lr=0.0025, n_epoch=12
         model.train()
         running_loss = 0.0
         pbar = tqdm(enumerate(trainloader, 0), total=len(trainloader))
-        for i, (inputs, labels) in pbar:
-            if loss != None:
+        for _i_batch, (inputs, labels) in pbar:
+            if loss is not None:
                 pbar.set_description("Epoch: " + str(epoch) + " || loss: " + str(loss.item()))
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = inputs.to(device), labels.to(device)

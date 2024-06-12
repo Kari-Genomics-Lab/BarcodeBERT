@@ -121,13 +121,13 @@ if [ $FINETUNE = true ]; then
           --find_unused_parameters False \
           --eval_and_save_results False \
           --save_model True
-        
+
         # generate embeddings for DNABERT-2
         CHECKPOINT="$OUTPUT/finetuning/$MODEL"
         cd $ROOT/feature_extraction
         mkdir -p "$OUTPUT/embeddings"
         python main.py --input_path "$DATA/res101.mat" --model "$MODEL" --checkpoint "$CHECKPOINT" --output "$EMBEDDINGS"
-    
+
     # Fine-tune BarcodeBERT or DNABERT
     else
         cd $ROOT/finetuning

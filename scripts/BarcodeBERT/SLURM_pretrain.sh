@@ -1,25 +1,19 @@
 #!/bin/bash
-         
-#SBATCH --account=ctb-gwtaylor
-#SBATCH --partition=c-gwtaylor
+
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:t4:4
-#SBATCH --cpus-per-task=4       
-#SBATCH --mem=16000M            
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=16000M
 #SBATCH --time=2-1:00:00
 #SBATCH --output=%N-%j-GPU-Job.out    # %N for node name, %j for jobID
-#SBATCH --exclusive
 
-module load python/3.9 cuda cudnn
-
-#Prepare virtualenv
-virtualenv --no-download $SLURM_TMPDIR/env
-source $SLURM_TMPDIR/env/bin/activate
-
-#Install all libraries
-
-cd /home/pmillana/bioscan/
-pip install --no-index -r requirements.txt
+module load python/3.11 cuda cudnn
+ENVPATH="$SLURM_TMPDIR/env"
+virtualenv --no-download "$ENVPATH"
+source "$ENVPATH/bin/activate"
+python -m pip install --no-index -r CC_requirements.txt
 echo 'Libraries Installed'
-cd scripts/BarcodeBERT
-python MGPU_MLM_train.py --input_path=../../data/pre_training.tsv --k_mer=4 --stride=4 --checkpoint=True
+pip install --no-index .
+echo 'Installed'
+
+python barcodebert/pretraining.py --run-name barcodebert_computecanada --k-mer 4 --stride 4 --data-dir ./data/

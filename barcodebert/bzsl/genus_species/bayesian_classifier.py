@@ -2,10 +2,10 @@ from typing import Optional
 
 import numpy as np
 import torch
-from sklearn.decomposition import PCA
 from scipy.linalg import cholesky
-from scipy.stats import mode
 from scipy.special import gammaln
+from scipy.stats import mode
+from sklearn.decomposition import PCA
 
 
 def apply_pca(pca_dim, *x_data):
@@ -378,9 +378,7 @@ class BayesianClassifier:
 
         for class_idx in range(num_classes):
             sample_indices = y_true == y_true_classes[class_idx]
-            per_class_acc[class_idx] = np.sum(y_true[sample_indices] == y_pred[sample_indices]) / np.sum(
-                sample_indices
-            )
+            per_class_acc[class_idx] = np.sum(y_true[sample_indices] == y_pred[sample_indices]) / np.sum(sample_indices)
 
         acc = np.mean(per_class_acc)  # macro accuracy
 

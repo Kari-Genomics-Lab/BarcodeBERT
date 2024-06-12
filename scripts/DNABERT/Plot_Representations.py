@@ -1,31 +1,21 @@
 import argparse
 import os
-import random
-
-import numpy as np
-import scipy.io as sio
-import torch
-from tqdm import tqdm
-from sklearn.model_selection import StratifiedShuffleSplit
-
-from model import load_model
-from bert_extract_dna_feature import extract_clean_barcode_list, extract_clean_barcode_list_for_aligned
-from pablo_bert_with_prediction_head import train_and_eval
-from torch.utils.data import DataLoader, Dataset
-import pandas as pd
 import pickle
+import random
 import time
+import warnings
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
+import torch
+from model import load_model
+from torch.utils.data import Dataset
 
-import warnings
 warnings.filterwarnings("ignore", message=".*The 'nopython' keyword.*")
 
 import umap
-
-from sklearn.neighbors import NearestNeighbors, KNeighborsClassifier
-
 
 device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 random.seed(10)
@@ -54,35 +44,33 @@ class DNADataset(Dataset):
 
 
 def extract_features(args, file, model, sequence_pipeline):
-    
-    df = pd.read_csv(f"{args.input_path}/{file}", sep='\t')
-    target_level='species_name'
 
-    barcodes =  df['nucleotides']
-    targets  =  df[target_level]
+    df = pd.read_csv(f"{args.input_path}/{file}", sep="\t")
+    target_level = "species_name"
 
-    label_set=sorted(list(set(targets.tolist())))
-    targets = np.array(list(map(lambda x: label_set.index(x), targets)))  
-    
+    barcodes = df["nucleotides"]
+    targets = df[target_level]
+
+    label_set = sorted(set(targets.tolist()))
+    targets = np.array([label_set.index(x) for x in targets])
+
     dna_embeddings = []
-    labels=[]
+    labels = []
 
     with torch.no_grad():
         for i, _barcode in enumerate(barcodes):
             x = torch.tensor(sequence_pipeline(_barcode), dtype=torch.int64).unsqueeze(0).to(device)
             x = model(x).hidden_states[-1]
-            x = x.mean(1)   #Global Average
-            #print(x.shape)
+            x = x.mean(1)  # Global Average
+            # print(x.shape)
             dna_embeddings.extend(x.cpu().numpy())
             labels.append(targets[i])
 
-                
     print(f"There are {len(dna_embeddings)} points in the dataset")
-    latent = np.array(dna_embeddings).reshape(-1,768)
+    latent = np.array(dna_embeddings).reshape(-1, 768)
     y = np.array(labels)
-    #print(latent.shape)
+    # print(latent.shape)
     return latent, y
-    
 
 
 if __name__ == "__main__":
@@ -103,58 +91,55 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    
+
     train_file = f"embeddings/{args.k}_train.pkl"
     test_file = f"embeddings/{args.k}_test.pkl"
-    
+
     if os.path.isfile(train_file):
-        print(f'Representations found  after {time.time()-start} seconds . . .')
-        with open(train_file, 'rb') as f:
+        print(f"Representations found  after {time.time()-start} seconds . . .")
+        with open(train_file, "rb") as f:
             X, y = pickle.load(f)
-            train = pd.read_csv('../../data/supervised_train.tsv', sep='\t')
-            y = train['species_name']
+            train = pd.read_csv("../../data/supervised_train.csv")
+            y = train["species_name"]
 
-    else: 
+    else:
 
         print("Loading the model.....")
         model, sequence_pipeline = load_model(args, k=args.k)
 
-        X, y = extract_features(args,'supervised_train.tsv', model, sequence_pipeline)
+        X, y = extract_features(args, "supervised_train.csv", model, sequence_pipeline)
         file = open(train_file, "wb")
-        pickle.dump((X,y), file)
+        pickle.dump((X, y), file)
         file.close()
 
-        
     if os.path.isfile(test_file):
-        print(f'Representations found  after {time.time()-start} seconds . . .')
-        with open(test_file, 'rb') as f:
+        print(f"Representations found  after {time.time()-start} seconds . . .")
+        with open(test_file, "rb") as f:
             X_test, y_test = pickle.load(f)
-            test= pd.read_csv('../../data/supervised_test.tsv', sep='\t')
-            y_test = test['species_name']
-            
+            test = pd.read_csv("../../data/supervised_test.csv")
+            y_test = test["species_name"]
 
-    else: 
+    else:
 
         print("Loading the model.....")
         model, sequence_pipeline = load_model(args, k=args.k)
 
-        X_test, y_test = extract_features(args,'supervised_test.tsv', model, sequence_pipeline)
+        X_test, y_test = extract_features(args, "supervised_test.csv", model, sequence_pipeline)
         file = open(test_file, "wb")
-        pickle.dump((X_test,y_test), file)
+        pickle.dump((X_test, y_test), file)
         file.close()
-    
 
     # Set the font to Times New Roman
-    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams["font.family"] = "serif"
     embedding = umap.UMAP(random_state=42).fit_transform(X_test)
 
     plt.title("DNABERT representation space of testing sequences \n colored by order")
     plt.xlabel("UMAP 1")
     plt.ylabel("UMAP 2")
-    #sns.scatterplot(x=embedding[:,0], y=embedding[:, 1], hue=train_orders, s=2, legend='auto')
-    sns.scatterplot(x=embedding[:,0], y=embedding[:, 1], hue=test['order_name'].to_list(), s=2, legend='auto')
-    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+    # sns.scatterplot(x=embedding[:,0], y=embedding[:, 1], hue=train_orders, s=2, legend='auto')
+    sns.scatterplot(x=embedding[:, 0], y=embedding[:, 1], hue=test["order_name"].to_list(), s=2, legend="auto")
+    plt.legend(bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
     plt.tight_layout()
 
-    #plt.savefig('1D_CNN_embeddings.png',dpi=150)
-    plt.savefig('DNABERT_embeddings.pdf', format='pdf', bbox_inches='tight', dpi=150)
+    # plt.savefig('1D_CNN_embeddings.png',dpi=150)
+    plt.savefig("DNABERT_embeddings.pdf", format="pdf", bbox_inches="tight", dpi=150)

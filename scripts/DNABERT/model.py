@@ -2,11 +2,10 @@ from itertools import product
 from typing import Optional
 
 import torch
-from torchtext.vocab import build_vocab_from_iterator
-from transformers import AutoModel, AutoTokenizer, BertConfig, BertForMaskedLM
-
 from dnabert.tokenization_dna import DNATokenizer
 from pablo_bert_with_prediction_head import Bert_With_Prediction_Head
+from torchtext.vocab import build_vocab_from_iterator
+from transformers import AutoModel, AutoTokenizer, BertConfig, BertForMaskedLM
 
 device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 
@@ -85,9 +84,9 @@ def get_dnabert_encoder(tokenizer, max_len: int, k: int = 6):
                 for x in preprocessed
             ]
         else:
-            return tokenizer.encode_plus(preprocessed, max_length=max_len, add_special_tokens=True, pad_to_max_length=True)[
-                "input_ids"
-            ]
+            return tokenizer.encode_plus(
+                preprocessed, max_length=max_len, add_special_tokens=True, pad_to_max_length=True
+            )["input_ids"]
 
     return dnabert_encoder
 

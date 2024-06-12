@@ -3,16 +3,12 @@ import os
 import random
 
 import numpy as np
-import scipy.io as sio
+import pandas as pd
 import torch
-from tqdm import tqdm
-from sklearn.model_selection import StratifiedShuffleSplit
-
-from model import load_model
 from bert_with_prediction_head import train_and_eval
+from model import load_model
 from torch.utils.data import DataLoader, Dataset
-import pandas as pd 
-
+from tqdm import tqdm
 
 device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 random.seed(10)
@@ -40,26 +36,23 @@ class DNADataset(Dataset):
         return processed_barcode, self.labels[idx]
 
 
-
 def load_data(args):
     train = pd.read_csv(f"{args.input_path}/supervised_train.csv")
-    target_level='species_name'
+    target_level = "species_name"
 
-    x_train =  train['nucleotides']
-    y_train  =  train[target_level]
+    x_train = train["nucleotides"]
+    y_train = train[target_level]
 
     test = pd.read_csv(f"{args.input_path}/supervised_test.csv")
 
-    x_val =  test['nucleotides']
-    y_val =  test[target_level]
-    
-    label_set=sorted(list(set(y_train.tolist())))
-    y_train = np.array(list(map(lambda x: label_set.index(x), y_train)))
-    y_val = np.array(list(map(lambda x: label_set.index(x), y_val)))
-    
-    
-    num_class= len(label_set)
-    
+    x_val = test["nucleotides"]
+    y_val = test[target_level]
+
+    label_set = sorted(set(y_train.tolist()))
+    y_train = np.array([label_set.index(y) for y in y_train])
+    y_val = np.array([label_set.index(y) for y in y_val])
+
+    num_class = len(label_set)
 
     return x_train, y_train, x_val, y_val, num_class
 
@@ -157,6 +150,6 @@ if __name__ == "__main__":
 
     train_and_eval(model, train_loader, val_loader, device=device, n_epoch=args.n_epoch)
 
-    #extract_and_save_class_level_feature(args, model, sequence_pipeline, barcodes, labels)
+    # extract_and_save_class_level_feature(args, model, sequence_pipeline, barcodes, labels)
 
-    torch.save(model.bert_model.state_dict(),f'../../model_checkpoints/dnabert_{args.k}.pth')
+    torch.save(model.bert_model.state_dict(), f"../../model_checkpoints/dnabert_{args.k}.pth")

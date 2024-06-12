@@ -1,6 +1,5 @@
-import torch.nn as nn
-from opt_einsum.backends import torch
 import torch
+import torch.nn as nn
 
 
 class FinetuneBert(nn.Module):
@@ -39,4 +38,3 @@ def remove_extra_pre_fix(state_dict):
             key = key[7:]
         new_state_dict[key] = value
     return new_state_dict
-

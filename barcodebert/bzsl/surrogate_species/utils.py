@@ -1,12 +1,10 @@
 import math
+import os
 import random
 
 import numpy as np
 import scipy.io as sio
 from scipy.linalg import eigh
-import os
-
-"""Data loading part"""
 
 
 class DataLoader:
@@ -118,7 +116,7 @@ class DataLoader:
             genera = [species[0][0].split()[0] for species in data_mat["species"]]
             unique_genera = np.unique(genera)
             genus_to_idx = dict(zip(unique_genera, self.num_species + np.arange(len(genera))))
-            self.genus_labels = np.array(list(map(lambda g: genus_to_idx[g], genera)))
+            self.genus_labels = np.array([genus_to_idx[g] for g in genera])
 
             # build mapping of species label to genus label
             self.label_to_genus = {}
@@ -161,7 +159,8 @@ class DataLoader:
     def load_tuned_params(self):
         if self.dataset not in ["INSECT", "CUB"]:
             print(
-                'The provided dataset is not in the gallery. Please use one of these 2 datsets to load tuned params: ["INSECT", "CUB"]'
+                "The provided dataset is not in the gallery. Please use one of these 2 datsets to load tuned params:"
+                ' ["INSECT", "CUB"]'
             )
             return
 
@@ -181,7 +180,7 @@ class DataLoader:
         return self.side_info, *hyperparams
 
 
-### Seen, Unseen class and Harmonic mean claculation ###
+# Seen, Unseen class and Harmonic mean claculation ###
 def perf_calc_acc(y_ts_s, y_ts_us, ypred_s, ypred_us, label_to_genus=None):
     if label_to_genus:
         # we only need to do this for unseen, since seen classes will always be at species level

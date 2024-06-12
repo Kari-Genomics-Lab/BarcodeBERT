@@ -4,9 +4,8 @@ import random
 import numpy as np
 import scipy.io as sio
 import torch
-from tqdm import tqdm
-
 from model import load_model
+from tqdm import tqdm
 
 device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 random.seed(10)

@@ -1,23 +1,14 @@
 import argparse
 import os
-import random
-
-import numpy as np
-import scipy.io as sio
-import torch
-from tqdm import tqdm
-from sklearn.model_selection import StratifiedShuffleSplit
-
-from model import load_model
-from bert_extract_dna_feature import extract_clean_barcode_list, extract_clean_barcode_list_for_aligned
-from pablo_bert_with_prediction_head import train_and_eval
-from torch.utils.data import DataLoader, Dataset
-import pandas as pd
 import pickle
+import random
 import time
 
-from sklearn.neighbors import NearestNeighbors, KNeighborsClassifier
-
+import numpy as np
+import pandas as pd
+import torch
+from model import load_model
+from torch.utils.data import Dataset
 
 device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 random.seed(10)
@@ -46,35 +37,33 @@ class DNADataset(Dataset):
 
 
 def extract_features(args, file, model, sequence_pipeline):
-    
+
     df = pd.read_csv(f"{args.input_path}/{file}")
-    target_level='species_name'
+    target_level = "species_name"
 
-    barcodes =  df['nucleotides']
-    targets  =  df[target_level]
+    barcodes = df["nucleotides"]
+    targets = df[target_level]
 
-    label_set=sorted(list(set(targets.tolist())))
-    targets = np.array(list(map(lambda x: label_set.index(x), targets)))  
-    
+    label_set = sorted(set(targets.tolist()))
+    targets = np.array([label_set.index(t) for t in targets])
+
     dna_embeddings = []
-    labels=[]
+    labels = []
 
     with torch.no_grad():
         for i, _barcode in enumerate(barcodes):
             x = torch.tensor(sequence_pipeline(_barcode), dtype=torch.int64).unsqueeze(0).to(device)
             x = model(x).hidden_states[-1]
-            x = x.mean(1)   #Global Average
-            #print(x.shape)
+            x = x.mean(1)  # Global Average
+            # print(x.shape)
             dna_embeddings.extend(x.cpu().numpy())
             labels.append(targets[i])
 
-                
     print(f"There are {len(dna_embeddings)} points in the dataset")
-    latent = np.array(dna_embeddings).reshape(-1,768)
+    latent = np.array(dna_embeddings).reshape(-1, 768)
     y = np.array(labels)
-    #print(latent.shape)
+    # print(latent.shape)
     return latent, y
-    
 
 
 if __name__ == "__main__":
@@ -95,52 +84,52 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    
+
     train_file = f"embeddings/{args.k}_train.pkl"
     test_file = f"embeddings/{args.k}_test.pkl"
-    
+
     if os.path.isfile(train_file):
-        print(f'Representations found  after {time.time()-start} seconds . . .')
-        with open(train_file, 'rb') as f:
+        print(f"Representations found  after {time.time()-start} seconds . . .")
+        with open(train_file, "rb") as f:
             X, y = pickle.load(f)
-            train = pd.read_csv('../../data/supervised_train.csv')
-            y = train['species_name']
+            train = pd.read_csv("../../data/supervised_train.csv")
+            y = train["species_name"]
 
-    else: 
+    else:
 
         print("Loading the model.....")
         model, sequence_pipeline = load_model(args, k=args.k)
 
-        X, y = extract_features(args,'supervised_train.csv', model, sequence_pipeline)
+        X, y = extract_features(args, "supervised_train.csv", model, sequence_pipeline)
         file = open(train_file, "wb")
-        pickle.dump((X,y), file)
+        pickle.dump((X, y), file)
         file.close()
 
-        
     if os.path.isfile(test_file):
-        print(f'Representations found  after {time.time()-start} seconds . . .')
-        with open(test_file, 'rb') as f:
+        print(f"Representations found  after {time.time()-start} seconds . . .")
+        with open(test_file, "rb") as f:
             X_test, y_test = pickle.load(f)
-            test= pd.read_csv('../../data/supervised_test.csv')
-            y_test = test['species_name']
-            
+            test = pd.read_csv("../../data/supervised_test.csv")
+            y_test = test["species_name"]
 
-    else: 
+    else:
 
         print("Loading the model.....")
         model, sequence_pipeline = load_model(args, k=args.k)
 
-        X_test, y_test = extract_features(args,'supervised_test.csv', model, sequence_pipeline)
+        X_test, y_test = extract_features(args, "supervised_test.csv", model, sequence_pipeline)
         file = open(test_file, "wb")
-        pickle.dump((X_test,y_test), file)
+        pickle.dump((X_test, y_test), file)
         file.close()
-    
-    ## Training Linear Classifier
-    from sklearn.neural_network import MLPClassifier
+
+    # Training Linear Classifier
     from sklearn.linear_model import Perceptron
+
+    # from sklearn.neural_network import MLPClassifier
+
     print("training the classifier")
-    # clf = MLPClassifier(random_state=1, max_iter=1, 
+    # clf = MLPClassifier(random_state=1, max_iter=1,
     #                     verbose=True, early_stopping=True,
     #                     learning_rate='adaptive').fit(X, y)
     clf = Perceptron(tol=1e-3, random_state=0, verbose=False, early_stopping=True).fit(X, y)
-    print(f'Test Accuracy: {clf.score(X_test, y_test)}')
+    print(f"Test Accuracy: {clf.score(X_test, y_test)}")

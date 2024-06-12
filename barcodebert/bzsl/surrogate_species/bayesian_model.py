@@ -2,15 +2,17 @@ import json
 import time
 
 import numpy as np
-from scipy.special import gammaln
 from scipy.linalg import solve_triangular
 from scipy.spatial.distance import cdist
+from scipy.special import gammaln
 
-from barcodebert.bzsl.surrogate_species.utils import DataLoader, perf_calc_acc, apply_pca
+from barcodebert.bzsl.surrogate_species.utils import (DataLoader, apply_pca,
+                                                      perf_calc_acc)
 
 
 class Model:
     """Bayesian model for species classification"""
+
     def __init__(self, opt):
         super().__init__()
 
@@ -25,9 +27,7 @@ class Model:
         self.use_genus = opt.genus
 
         if opt.m and opt.m % self.pca_dim != 0:
-            raise ValueError(
-                f"m should be a multiple of the PCA dimension ({self.pca_dim}), but got {self.m} instead."
-            )
+            raise ValueError(f"m should be a multiple of the PCA dimension ({self.pca_dim}), but got {self.m} instead.")
 
         self.k_0 = opt.k_0
         self.k_1 = opt.k_1
@@ -35,7 +35,7 @@ class Model:
         self.s = opt.s
         self.K = opt.K
 
-    ### Claculating class mean and covariance priors ###
+    # Claculating class mean and covariance priors
     def calculate_priors(self, xtrain, ytrain, model_v="unconstrained"):
         dim = xtrain.shape[1]
         uy = np.unique(ytrain)
@@ -59,23 +59,22 @@ class Model:
         return mu_0, Sigma_0
 
     # Check for tie, if yes, change the last similar class with the next one untill tie broken
-    def check_for_tie(self, curr_unseen_class, usclass_list, seenclasses, curr_classes, s_in, K):
-        ll = len(usclass_list)
+    def check_for_tie(self, curr_unseen_class, usclass, seenclasses, curr_classes, s_in, K):
         flag = True
         ect = 0
         while flag:
             flag = False
-            for key, arr in usclass_list.items():
+            for arr in usclass.values():
                 if set(curr_classes) == set(arr):
                     flag = True
                     curr_classes[-1] = seenclasses[s_in[K + ect]]
                     ect += 1
                     break
-        usclass_list[curr_unseen_class] = curr_classes
+        usclass[curr_unseen_class] = curr_classes
 
-        return curr_classes, usclass_list
+        return curr_classes, usclass
 
-    ### Calculating Posterior Predictive Distribution parameters ###
+    # Calculating Posterior Predictive Distribution parameters
     def calculate_ppd_params(self, xtrain, ytrain, att_seen, att_unseen, unseenclasses, K, Psi, mu0, m, k0, k1):
         seenclasses = np.unique(ytrain)
         nc = len(seenclasses) + len(unseenclasses)
@@ -218,7 +217,7 @@ class Model:
 
         return Sig_s, mu_s, v_s, class_id, Sigmas
 
-        ### PPD calculation (Log-Likelihood of Student-t) ###
+        # PPD calculation (Log-Likelihood of Student-t)
 
     def bayesian_cls_evaluate(self, X, Sig_s, mu_s, v_s, class_id):
         # Initialization
@@ -232,7 +231,7 @@ class Model:
         for j in range(ncl):
             v = X - mu_s[j]  # Center the data
             k = 0
-            I = np.eye(Sig_s[:, :, j].shape[0])
+            Imat = np.eye(Sig_s[:, :, j].shape[0])
             while True:
                 try:
                     chsig = np.linalg.cholesky(Sig_s[:, :, j])
@@ -243,7 +242,7 @@ class Model:
                     k += 1
                     w, v_v = np.linalg.eig(Sig_s[:, :, j])
                     min_eig = v_v.min().astype(np.float)
-                    Sig_s[:, :, j] += (-min_eig * k * k + np.spacing(min_eig)) * I
+                    Sig_s[:, :, j] += (-min_eig * k * k + np.spacing(min_eig)) * Imat
 
             # chsig = np.linalg.cholesky(Sig_s[:, :, j])  # Cholesky decomposition
             tpar = (
@@ -251,9 +250,7 @@ class Model:
                 - (gl_pc[v_s[j] - 1] + (d / 2) * np.log(v_s[j]) + piconst)
                 - np.sum(np.log(chsig.diagonal()))
             )  # Stu-t lik part 1
-            temp = solve_triangular(
-                chsig, v.T, overwrite_b=True, check_finite=False, lower=True
-            ).T  # mrdivide(v,chsig)
+            temp = solve_triangular(chsig, v.T, overwrite_b=True, check_finite=False, lower=True).T  # mrdivide(v,chsig)
             norm2 = np.einsum("ij,ij->i", temp, temp)  # faster than np.sum(temp**2)
 
             lkh[:, j] = tpar - 0.5 * (v_s[j] + d) * np.log(1 + (1 / v_s[j]) * norm2)
@@ -315,7 +312,7 @@ class Model:
 
         k0_range = [0.1, 1]
         k1_range = [10, 25]
-        a0_range = [1, 10, 100]
+        # a0_range = [1, 10, 100]
         s_range = [1, 5, 10]
         K_range = [1, 2, 3]
 
@@ -355,13 +352,11 @@ class Model:
                                         tuning=True,
                                     )
 
-                                    ### Prediction phase ###
+                                    # Prediction phase
                                     ypred_unseen, _ = self.bayesian_cls_evaluate(
                                         xtest_unseen, Sig_s, mu_s, v_s, class_id
                                     )
-                                    ypred_seen, _ = self.bayesian_cls_evaluate(
-                                        xtest_seen, Sig_s, mu_s, v_s, class_id
-                                    )
+                                    ypred_seen, _ = self.bayesian_cls_evaluate(xtest_seen, Sig_s, mu_s, v_s, class_id)
 
                                     _, _, gzsl_seen_acc, gzsl_unseen_acc, H = perf_calc_acc(
                                         ytest_seen, ytest_unseen, ypred_seen, ypred_unseen, dataloader.label_to_genus
@@ -435,7 +430,7 @@ class Model:
                 K = self.K
 
         """
-        To reproduce the results from paper please use the following function to laod the 
+        To reproduce the results from paper please use the following function to laod the
         parameters obtained by CV
         """
 
@@ -443,7 +438,7 @@ class Model:
         if self.pca_dim:
             xtrain, xtest_seen, xtest_unseen = apply_pca(xtrain, xtest_seen, xtest_unseen, self.pca_dim)
         time_s = time.time()
-        ### PPD parameter estimation ###
+        # PPD parameter estimation
         Sig_s, mu_s, v_s, class_id, _ = self.bayesian_cls_train(
             xtrain,
             ytrain,
@@ -458,7 +453,7 @@ class Model:
             tuning=False,
         )
 
-        ### Prediction phase ###
+        # Prediction phase
         ypred_unseen, prob_mat_unseen = self.bayesian_cls_evaluate(xtest_unseen, Sig_s, mu_s, v_s, class_id)
         ypred_seen, prob_mat_seen = self.bayesian_cls_evaluate(xtest_seen, Sig_s, mu_s, v_s, class_id)
 

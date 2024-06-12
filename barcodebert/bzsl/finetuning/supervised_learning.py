@@ -13,13 +13,10 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from barcodebert.bzsl.models import load_model
 from barcodebert.bzsl.feature_extraction import (
-    extract_clean_barcode_list,
-    extract_clean_barcode_list_for_aligned,
-    extract_dna_features,
-)
-
+    extract_clean_barcode_list, extract_clean_barcode_list_for_aligned,
+    extract_dna_features)
+from barcodebert.bzsl.models import load_model
 
 device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 random.seed(10)
@@ -151,7 +148,7 @@ def train_and_eval(
         running_loss = 0.0
         pbar = tqdm(enumerate(trainloader, 0), total=len(trainloader))
         for _, (inputs, labels) in pbar:
-            if loss != None:
+            if loss is not None:
                 pbar.set_description("Epoch: " + str(epoch) + " || loss: " + str(loss.item()))
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = inputs.to(device), labels.to(device)
@@ -217,9 +214,7 @@ def train_and_eval(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_path", default="../data/INSECT/res101.mat", type=str)
-    parser.add_argument(
-        "--model", choices=["bioscanbert", "barcodebert", "dnabert", "dnabert2"], default="barcodebert"
-    )
+    parser.add_argument("--model", choices=["bioscanbert", "barcodebert", "dnabert", "dnabert2"], default="barcodebert")
     parser.add_argument("--checkpoint", default="bert_checkpoint/5-mer/model_41.pth", type=str)
     parser.add_argument("--output_dir", type=str, default="../data/INSECT/")
     parser.add_argument("--using_aligned_barcode", default=False, action="store_true")

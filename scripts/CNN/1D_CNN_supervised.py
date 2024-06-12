@@ -1,23 +1,18 @@
+import time
+
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
-import time
-
-
-from sklearn.model_selection import train_test_split
-
 
 train = pd.read_csv("../data/supervised_train.csv", sep=None)
 test = pd.read_csv("../data/supervised_test.csv", sep=None)
 
-target_level='species_name'
+target_level = "species_name"
 
-device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
-
+device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 
 
 # CNN model architecture
@@ -58,47 +53,41 @@ class CNNModel(nn.Module):
         return x
 
 
-
-
 def data_from_df(df, target_level):
-    barcodes =  df['nucleotides'].to_list()
-    species  =  df[target_level].to_list()
-    orders = test['order_name'].to_list()
+    barcodes = df["nucleotides"].to_list()
+    species = df[target_level].to_list()
+    orders = test["order_name"].to_list()
 
     print(len(barcodes), len(species))
     # Number of training samples and entire data
     N = len(barcodes)
 
     # Reading barcodes and labels into python list
-    labels=[]
-    species_idx=sorted(list(set(species)))
+    labels = []
+    species_idx = sorted(set(species))
 
     for i in range(N):
-        if len(barcodes[i])>0:
+        if len(barcodes[i]) > 0:
             barcodes.append(barcodes[i])
             labels.append(species_idx.index(species[i]))
 
     sl = 660
-    nucleotide_dict = {'A': 0, 'C':1, 'G':2, 'T':3, 'N':4}
-    X=np.zeros((N,sl,5), dtype=np.float32)
+    nucleotide_dict = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}
+    X = np.zeros((N, sl, 5), dtype=np.float32)
     for i in range(N):
-        Nt=len(barcodes[i])
-
         for j in range(sl):
-            if(len(barcodes[i])>j):
-                k=nucleotide_dict[barcodes[i][j]]
-                X[i][j][k]=1.0
+            if len(barcodes[i]) > j:
+                k = nucleotide_dict[barcodes[i][j]]
+                X[i][j][k] = 1.0
 
-    #print(X.shape, )
+    # print(X.shape, )
     return X, np.array(labels), orders
-
-
 
 
 X_train, y_train, train_orders = data_from_df(train, target_level)
 X_test, y_test, orders = data_from_df(test, target_level)
 
-numClasses = max(y_train)+1
+numClasses = max(y_train) + 1
 print(numClasses)
 
 model = CNNModel(1, numClasses)
@@ -114,7 +103,7 @@ dataloader = DataLoader(train_dataset, batch_size=128, shuffle=True)
 test_dataset = torch.utils.data.TensorDataset(torch.tensor(X_test), torch.tensor(y_test))
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=True)
 
-log_interval=200
+log_interval = 200
 
 # Training
 for epoch in range(20):
@@ -127,7 +116,7 @@ for epoch in range(20):
 
         optimizer.zero_grad()
         predicted_label = model(inputs)
-        #print(predicted_label.shape)
+        # print(predicted_label.shape)
         loss = criterion(predicted_label, labels)
         loss.backward()
         optimizer.step()
@@ -138,19 +127,17 @@ for epoch in range(20):
             elapsed = time.time() - start_time
             print(
                 "| epoch {:3d} | {:5d}/{:5d} batches "
-                "| accuracy {:8.3f}".format(
-                    epoch, idx, len(dataloader), total_acc / total_count
-                )
+                "| accuracy {:8.3f}".format(epoch, idx, len(dataloader), total_acc / total_count)
             )
             total_acc, total_count = 0, 0
             start_time = time.time()
-    
+
     model.eval()
     total_acc, total_count = 0, 0
 
     with torch.no_grad():
-        for idx, (inputs, labels) in enumerate(test_loader):
-            inputs, labels= inputs.view(-1, 1, 660, 5).to(device), labels.to(device)
+        for inputs, labels in test_loader:
+            inputs, labels = inputs.view(-1, 1, 660, 5).to(device), labels.to(device)
             predicted_label = model(inputs)
             loss = criterion(predicted_label, labels)
             total_acc += (predicted_label.argmax(1) == labels).sum().item()
@@ -159,10 +146,8 @@ for epoch in range(20):
     print("-" * 59)
     print(
         "| end of epoch {:3d} | time: {:5.2f}s | "
-        "Test accuracy {:8.3f} ".format(
-            epoch, time.time() - epoch_start_time, accu_val
-        )
+        "Test accuracy {:8.3f} ".format(epoch, time.time() - epoch_start_time, accu_val)
     )
     print("-" * 59)
 
-torch.save(model.state_dict(), '../model_checkpoints/new_model_CNN.pth')
+torch.save(model.state_dict(), "../model_checkpoints/new_model_CNN.pth")

@@ -2,14 +2,11 @@ import argparse
 import random
 
 import scipy.io as sio
-import torch
 
-from barcodebert.bzsl.models import load_model
 from barcodebert.bzsl.feature_extraction import (
-    extract_clean_barcode_list,
-    extract_clean_barcode_list_for_aligned,
-    extract_dna_features,
-)
+    extract_clean_barcode_list, extract_clean_barcode_list_for_aligned,
+    extract_dna_features)
+from barcodebert.bzsl.models import load_model
 
 random.seed(10)
 

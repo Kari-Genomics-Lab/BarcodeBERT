@@ -4,26 +4,54 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "barcodebert"
-version = "0.0.1"
 authors = [
   { name="Example Author", email="author@example.com" },
 ]
 description = "repository for training and evaluating BarcodeBERT"
 readme = "README.md"
 requires-python = ">=3.11"
-dynamic = ["dependencies"]
+dependencies = [
+    "accelerate>=0.23.0",
+    "boto3>=1.28.51",
+    "botocore>=1.31.51",
+    "cmake>=3.27.5",
+    "einops>=0.6.1",
+    "matplotlib",
+    "numpy>=1.25.0",
+    "omegaconf>=2.3.0",
+    "opt-einsum>=3.3.0",
+    "pandas>=2.1.1",
+    "peft>=0.5.0",
+    "scikit-learn>=1.3.0",
+    "scipy>=1.11.2",
+    "seaborn",
+    "torch>=2.0.1",
+    "torchtext>=0.15.2",
+    "torchvision>=0.15.2",
+    "transformers>=4.29.2",
+    "umap-learn>=0.5.3",
+    "wandb",
+]
+dynamic = ["version"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 
-[tool.setuptools]
-packages = ["barcodebert"]
-
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
+[project.optional-dependencies]
+dev = ["black==24.3.0", "pre-commit"]
 
 [project.urls]
 Homepage = "https://github.com/Kari-Genomics-Lab/BarcodeBERT"
 Issues = "https://github.com/Kari-Genomics-Lab/BarcodeBERT/issues"
+
+[tool.black]
+line-length = 120
+target-version = ['py311']
+
+[tool.setuptools]
+packages = ["barcodebert"]
+
+[tool.setuptools.dynamic]
+version = {attr = "barcodebert.__version__"}

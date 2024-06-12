@@ -1,8 +1,8 @@
 # Bayesian Zero-shot Learning Task
 
 We use Bayesian zero-shot learning (BZSL) as a downstream task for evaluation of the BarcodeBERT model.
-This method is taken from "Fine-Grained Zero-Shot Learning with DNA as Side Information" and "Classifying the unknown: Insect identification with deep hierarchical Bayesian learning". Our main modifications include adapting the BZSL 
-approach to run natively in Python and to work with other models for DNA feature extraction, including BarcodeBERT, 
+This method is taken from "Fine-Grained Zero-Shot Learning with DNA as Side Information" and "Classifying the unknown: Insect identification with deep hierarchical Bayesian learning". Our main modifications include adapting the BZSL
+approach to run natively in Python and to work with other models for DNA feature extraction, including BarcodeBERT,
 DNABERT, and DNABERT-2, to compare against the baseline CNN used in the original paper. The original repositories for
 this method can be found [here](https://github.com/sbadirli/Fine-Grained-ZSL-with-DNA) and [here](https://github.com/sbadirli/Zero-shot-Insect-Discovery).
 
@@ -51,7 +51,7 @@ python finetuning/supervised_learning.py --input_path "$DATA/res101.mat" --model
 ```
 
 This will generate a CSV of DNA feature embeddings which you can then use in the BZSL task. Alternatively, you can use
-the `feature_extraction/main.py` script itself to extract the features for the base model after finetuning. 
+the `feature_extraction/main.py` script itself to extract the features for the base model after finetuning.
 
 For any finetuning related to the DNABERT-2 model, you will need to use the [DNABERT-2](https://github.com/Zhihan1996/DNABERT_2) repository:
 ```shell
