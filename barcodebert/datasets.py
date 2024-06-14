@@ -67,10 +67,10 @@ class DnaBertBPETokenizer(object):
 
 class DNADataset(Dataset):
     def __init__(
-        self, file_path, k_mer=4, stride=4, max_len=256, randomize_offset=False, use_unk_token=True, tokenizer="kmer"
+        self, file_path, k_mer=4, stride=None, max_len=256, randomize_offset=False, use_unk_token=True, tokenizer="kmer"
     ):
         self.k_mer = k_mer
-        self.stride = stride
+        self.stride = k_mer if stride is None else stride
         self.max_len = max_len
         self.randomize_offset = randomize_offset
 
@@ -102,11 +102,10 @@ class DNADataset(Dataset):
             raise ValueError(f'Tokenizer "{tokenizer}" not recognized.')
         df = pd.read_csv(file_path, sep="\t" if file_path.endswith(".tsv") else ",", keep_default_na=False)
         self.barcodes = df["nucleotides"].to_list()
-        self.labels = df["species_name"].to_list()
+        self.label_names = df["species_name"].to_list()
+        self.labels = df["species_index"].to_list()
 
-        self.label_set = sorted(set(self.labels))
-        self.label_pipeline = lambda x: self.label_set.index(x)
-        self.num_labels = len(df["species_name"].unique())
+        self.num_labels = 22_622
 
     def __len__(self):
         return len(self.barcodes)

@@ -87,7 +87,6 @@ def load_pretrained_model(checkpoint_path, device=None):
     print(f"Loaded model from {checkpoint_path}")
     return model, ckpt
 
-
 def load_old_pretrained_model(checkpoint_path, k_mer, device=None):
     """
     Load a pretrained model using the publised format from a checkpoint file.
