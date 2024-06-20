@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import sys
 import os
 import resource
+import sys
 import time
 from itertools import product
 
@@ -21,9 +21,9 @@ print(os.getcwd())
 from barcodebert import utils
 from barcodebert.datasets import KmerTokenizer
 from barcodebert.io import load_pretrained_model
-
+from baselines.datasets import labels_from_df, representations_from_df
 from baselines.io import load_baseline_model
-from baselines.datasets import representations_from_df, labels_from_df 
+
 
 def run(config):
     r"""
@@ -60,7 +60,7 @@ def run(config):
 
     # LOAD PRE-TRAINED CHECKPOINT =============================================
     # Map model parameters to be load to the specified gpu.
-    
+
     embedder = load_baseline_model(config.backbone)
     embedder.name = config.backbone
 
@@ -76,27 +76,27 @@ def run(config):
     timing_stats["preamble"] = time.time() - t_start
     t_start_embed = time.time()
 
-    #Data files
+    # Data files
     train_filename = os.path.join(config.data_dir, "supervised_train.csv")
     test_filename = os.path.join(config.data_dir, "unseen.csv")
 
-    #Get pipeline for reference labels:
+    # Get pipeline for reference labels:
     df = pd.read_csv(train_filename, sep="\t" if train_filename.endswith(".tsv") else ",", keep_default_na=False)
     labels = df[target_level].to_list()
     label_set = sorted(set(labels))
     label_pipeline = lambda x: label_set.index(x)
-    
+
     # Generate emebddings for the training and test sets
     print("Generating embeddings for test set", flush=True)
     X_unseen = representations_from_df(test_filename, embedder, batch_size=128)
     y_unseen = labels_from_df(test_filename, f"{config.taxon}_index", label_pipeline)
     print(X_unseen.shape, y_unseen.shape)
-    
+
     print("Generating embeddings for train set", flush=True)
     X = representations_from_df(train_filename, embedder, batch_size=128)
     y = labels_from_df(train_filename, f"{config.taxon}_index", label_pipeline)
     print(X.shape, y.shape)
-    
+
     timing_stats["embed"] = time.time() - t_start_embed
 
     # kNN =====================================================================
@@ -110,7 +110,7 @@ def run(config):
 
     # Evaluate ----------------------------------------------------------------
     t_start_test = time.time()
-    
+
     # Create a results dictionary
     results = {}
     for partition_name, X_part, y_part in [("Train", X, y), ("Unseen", X_unseen, y_unseen)]:
@@ -183,6 +183,7 @@ def run(config):
             **{f"knn/{partition}/{k}": v for partition, res in results.items() for k, v in res.items()},
         },
     )
+
 
 def get_parser():
     r"""

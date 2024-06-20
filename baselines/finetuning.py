@@ -1,12 +1,11 @@
-
 #!/usr/bin/env python
 
 import builtins
 import copy
 import os
 import shutil
-import time
 import sys
+import time
 from datetime import datetime
 from socket import gethostname
 
@@ -25,10 +24,8 @@ sys.path.append(".")
 from barcodebert import utils
 from barcodebert.datasets import DNADataset
 from barcodebert.io import load_pretrained_model, safe_save_model
-
+from baselines.datasets import DNADataset
 from baselines.io import load_baseline_model
-from baselines.datasets import DNADataset 
-
 
 BASE_BATCH_SIZE = 64
 
@@ -38,10 +35,10 @@ class ClassificationModel(nn.Module):
         super(ClassificationModel, self).__init__()
         self.num_labels = num_labels
         self.base_model = embedder.model
-        
-        #if hasattr(self.base_model, "classifier"):
+
+        # if hasattr(self.base_model, "classifier"):
         #    model.classifier = nn.Identity()
-        
+
         self.backbone = embedder.name
         self.hidden_size = embedder.hidden_size
         self.classifier = nn.Linear(self.hidden_size, self.num_labels)
@@ -49,16 +46,16 @@ class ClassificationModel(nn.Module):
     def forward(self, input_ids=None, mask=None, labels=None):
         # Getting the embeddings
 
-        #call each model's wrapper
-        if self.backbone == 'NT':
-            out = self.base_model(input_ids, output_hidden_states=True)['hidden_states'][-1]
-            
+        # call each model's wrapper
+        if self.backbone == "NT":
+            out = self.base_model(input_ids, output_hidden_states=True)["hidden_states"][-1]
+
         elif self.backbone == "Hyena_DNA":
             out = self.base_model(input_ids)
-        
-        elif self.backbone in ["DNABERT-2", "DNABERT-S"]: 
+
+        elif self.backbone in ["DNABERT-2", "DNABERT-S"]:
             out = self.base_model(input_ids)[0]
-            
+
         elif self.backbone == "BarcodeBERT":
             out = self.base_model(input_ids).hidden_states[-1]
 
@@ -108,7 +105,7 @@ def evaluate(
     y_pred_all = []
     xent_all = []
 
-    for (sequences, y_true) in dataloader:
+    for sequences, y_true in dataloader:
         sequences = sequences.view(-1, sequences.shape[-1]).to(device)
         y_true = y_true.to(device)
 
@@ -287,11 +284,8 @@ def run(config):
     if config.stride is None:
         config.stride = config.k_mer
 
-
     dataset_train = DNADataset(
-        file_path=os.path.join(config.data_dir, "supervised_train.csv"),
-        embedder=embedder,
-        randomize_offset=False
+        file_path=os.path.join(config.data_dir, "supervised_train.csv"), embedder=embedder, randomize_offset=False
     )
     dataset_val = DNADataset(
         file_path=os.path.join(config.data_dir, "supervised_val.csv"),
@@ -302,8 +296,8 @@ def run(config):
         file_path=os.path.join(config.data_dir, "supervised_test.csv"),
         embedder=embedder,
         randomize_offset=False,
-        )
-    
+    )
+
     distinct_val_test = True
     eval_set = "Val" if distinct_val_test else "Test"
 
@@ -373,8 +367,7 @@ def run(config):
         model = model.to(device)
         torch.cuda.set_device(device)
         model = nn.parallel.DistributedDataParallel(
-            model, device_ids=[config.local_rank], output_device=config.local_rank,
-            find_unused_parameters=True
+            model, device_ids=[config.local_rank], output_device=config.local_rank, find_unused_parameters=True
         )
     else:
         if config.local_rank is not None:
@@ -446,7 +439,6 @@ def run(config):
             job_type=job_type,
             tags=["evaluate", job_type],
         )
-        
 
     # If no checkpoint path was supplied, automatically determine the path to
     # which we will save the model checkpoint.
@@ -797,7 +789,7 @@ def train_one_epoch(
         batch_size_this_gpu = sequences.shape[0]
 
         # Move training inputs and targets to the GPU
-        #sequences = sequences.to(device)
+        # sequences = sequences.to(device)
         sequences = sequences.view(-1, sequences.shape[-1]).to(device)
         y_true = y_true.to(device)
 

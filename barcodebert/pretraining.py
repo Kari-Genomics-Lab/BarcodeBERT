@@ -265,7 +265,7 @@ def run(config):
     criterion = nn.CrossEntropyLoss()
 
     distance_table = None
-    
+
     # Mask schedule -----------------------------------------------------------
     if False:
         # Linearly increase to 0.75% masking ratio (disabled)
@@ -632,7 +632,7 @@ def train_one_epoch(
         # t_start_masking = time.time()
         masked_input = sequences.clone()
         random_mask = torch.rand(masked_input.shape, device=device)  # I can only do this for non-overlapping
-        input_maskout = random_mask < mask_ratio  
+        input_maskout = random_mask < mask_ratio
         input_maskout &= masked_input != 1  # Cannot mask the [<UNK>] token in the hard case
         masked_input[input_maskout] = 0
 
@@ -871,7 +871,7 @@ def evaluate(
             # t_start_masking = time.time()
             masked_input = sequences.clone()
             random_mask = torch.rand(masked_input.shape, generator=rng, device=device)
-            input_maskout = random_mask < mask_ratio 
+            input_maskout = random_mask < mask_ratio
             input_maskout &= masked_input != 1  # Cannot mask the [<UNK>] token in the hard case
             masked_input[input_maskout] = 0
 

@@ -1,20 +1,27 @@
-# BarcodeBERT
+# DNA language models for taxonomic classification
 
-A pre-trained transformer model for inference on insect DNA barcoding data.
+In this branch we pre-train BarcodeBERT on the BIOSCAN-5M dataset and compare its performance on the following tasks:
+* Classification of DNA barcodes from seen species.
+* Classification of barcodes from unseen species from seen genera.
 
-<p align="center">
-  <img src ="Figures/Arch.png" alt="drawing" width="500"/>
-</p>
+Currently, we only support the following encoders:
+* DNABERT-S
+* DNABERT-2
+* HyenaDNA
+* The nucleotide transformer (NT)
+* BarcodeBERT
 
-* Check out our [paper](https://arxiv.org/abs/2311.02401)
-* Check out our [poster](https://vault.cs.uwaterloo.ca/s/iixEfyeXMt8g3pi)
-
-#### Model weights
-
-[4-mers](https://vault.cs.uwaterloo.ca/s/5XdqgegTC6xe2yQ)  
-[5-mers](https://vault.cs.uwaterloo.ca/s/Cb6yzBpPdHQzjzg)  
-[6-mers](https://vault.cs.uwaterloo.ca/s/GCfZdeZEDCcdSNf)  
-
+| Model        | Architecture | SSL-Pretraining | Tokens seen   |  **Seen: Species**  (Fine-tuned )    | Linear probe  **Seen: Species** (Linear Probe) | **Unseen: Genus** (1NN-Probe) |
+ -------------|--------------|-----------------|---------------|:-----------------:|:-------------:|:----------------:|  
+ BLAST*       | --           | --              | --            | **99.78**     |     ---       |  **58.74**  
+ CNN baseline | CNN          | --              | --            | 97.70             | --            | 29.88
+ NT           | Transformer  | Multi-Species   | 300\,B        | 98.99             | 52.41         | 21.67  
+ DNABERT-2    | Transformer  | Multi-Species   | 512\,B        | **99.23**       | 67.81         | 17.99  
+ DNABERT-S    | Transformer  | Multi-Species   | ~1,000\,B     | 98.99             | **95.50**        | 17.70  
+ HyenaDNA     | SSM          | Human DNA       | 5\,B          | 98.71             | 54.82         | 19.26  
+ BarcodeBERT  | Transformer  | DNA barcodes    | 5\,B          | 98.52             | 91.93         | 23.15  
+ Ours (8-4-4) | Transformer  | DNA barcodes    | 7\,B          | **99.28**       | 94.47         | **47.03**  
+Our pre-trained transformer model on DNA barcodes follows the implementation in the BarcodeBERT [paper](https://arxiv.org/abs/2311.02401)  for inference on insect DNA barcoding data.
 
 ### Reproducing the results from the paper
 
@@ -23,71 +30,41 @@ A pre-trained transformer model for inference on insect DNA barcoding data.
 pip install -e .
 ```
 
-1. Download the [data](https://vault.cs.uwaterloo.ca/s/x7gXQKnmRX3GAZm)
+1. Download the [metadata file](https://drive.google.com/drive/u/1/folders/1TLVw0P4MT_5lPrgjMCMREiP8KW-V4nTb) and copy it into the data folder
+
+2. Split the metadata file into smaller file according to the different partitionss
 ```shell
-wget https://vault.cs.uwaterloo.ca/s/x7gXQKnmRX3GAZm/download -O data.zip
-unzip data.zip
-mv new_data/* data/
-rm -r new_data
-rm data.zip
+cd data/
+python data_split.py BIOSCAN-5M_Dataset_metadata.tsv
 ```
 
-##### CNN model
-Training:
-```bash
-cd scripts/CNN/
-python 1D_CNN_supervised.py
-```
-
-Evaluation:
-```bash
-python 1D_CNN_genus.py
-python 1D_CNN_Linear_probing.py
-```
-
-##### BarcodeBERT
-
-Model Pretraining:
-```bash
-python barcodebert/pretraining.py --data_path=data/pre_training.csv --k_mer=4 --stride=4
-python barcodebert/pretraining.py --data_path=data/pre_training.csv --k_mer=5 --stride=5
-python barcodebert/pretraining.py --data_path=data/pre_training.csv --k_mer=6 --stride=6
-```
-
-Evaluation:
-```bash
-python barcodebert/knn_probing.py --k_mer=4 --input_path=data/ --stride=4 --Pretrained_checkpoint_path=model_checkpoints/4_model_12_12_35.pth
-python barcodebert/knn_probing.py --k_mer=5 --input_path=data/ --stride=5 --Pretrained_checkpoint_path=model_checkpoints/5_model_12_12_35.pth
-python barcodebert/knn_probing.py --k_mer=6 --input_path=data/ --stride=6 --Pretrained_checkpoint_path=model_checkpoints/6_model_12_12_35.pth
-
-python barcodebert/linear_probing.py --k_mer=4 --input_path=data/ --stride=4 --Pretrained_checkpoint_path=model_checkpoints/4_model_12_12_35.pth
-python barcodebert/linear_probing.py --k_mer=5 --input_path=data/ --stride=5 --Pretrained_checkpoint_path=model_checkpoints/5_model_12_12_35.pth
-python barcodebert/linear_probing.py --k_mer=6 --input_path=data/ --stride=6 --Pretrained_checkpoint_path=model_checkpoints/6_model_12_12_35.pth
-```
-
-Model Fine-tuning
-To fine-tune the model, you need a folder with three files: "train," "test," and "dev." Each file should have two columns, one called "sequence" and the other called "label." You also need to specify the path to the pre-trained model you want to use for fine-tuning, using "pretrained_checkpoint_path".
-```bash
-python barcodebert/finetuning.py --data_path=path_to_input_folder --Pretrained_checkpoint_path=path_to_pretrained_model --k_mer=4 --stride=4
-python barcodebert/finetuning.py --data_path=path_to_input_folder --Pretrained_checkpoint_path=path_to_pretrained_model --k_mer=5 --stride=5
-python barcodebert/finetuning.py --data_path=path_to_input_folder --Pretrained_checkpoint_path=path_to_pretrained_model --k_mer=6 --stride=6
-```
-
-
-##### DNABERT
-To fine-tune the model on our data, you first need to follow the instructions in the [DNABERT repository](https://github.com/jerryji1993/DNABERT) original repository to donwnload the model weights. Place them in the `dnabert` folder and then run the following:
+3. Improved BarcodeBERT model pipeline
 
 ```bash
-cd scripts/DNABERT/
-python supervised_learning.py --data_path=../../data -k 4 --model dnabert --checkpoint dnabert/4-new-12w-0
-python supervised_learning.py --data_path=../../data -k 6 --model dnabert --checkpoint dnabert/6-new-12w-0
-python supervised_learning.py --data_path=../../data -k 5 --model dnabert --checkpoint dnabert/5-new-12w-0
+python barcodebert/pretraining.py --data_path=data/pretraining.csv --k_mer=8 --n_layers=4 --n_heads=4 --data_dir=data/
+python barcodebert/knn_probing.py --pretrained-checkpoint=path/to/checkpoint_pretraining.pt
+python barcodebert/finetuning.py --pretrained-checkpoint=path/to/checkpoint_pretraining.pt
+python barcodebert/finetuning.py --pretrained-checkpoint=path/to/checkpoint_pretraining.pt --freeze-encoder
 ```
 
+4. Baseline model pipeline
+```bash
+python baselines/knn_probing.py --backbone=<DESIRED-BACKBONE>
+python baselines/linear_probing.py --backbone=<DESIRED-BACKBONE>
+python baselines/finetuning.py --backbone=<DESIRED-BACKBONE> --data-dir=data/ --batch_size=32
+```
 
-###### DNABERT-2
+5. BLAST
+```shell
+cd data/
+python to_fasta.py --input_file=supervised_train.csv &&
+python to_fasta.py --input_file=supervised_test.csv &&
+python to_fasta.py --input_file=unseen.csv
 
-To fine-tune the model on our dataset, you need to follow the instructions in [DNABERT2 repository](https://github.com/Zhihan1996/DNABERT_2) for fine-tuning the model on new dataset. You can use the same input path that is used for fine-tuning BarcodeBERT as the input path to DNABERT2.
+makeblastdb -in supervised_train.fas -title train -dbtype nucl -out train.fas
+blastn -query supervised_test.fas -db train.fas -out results_supervised_test.tsv -outfmt 6 -num_threads 16
+blastn -query unseen.fas -db train.fas -out results_unseen.tsv -outfmt 6 -num_threads 16
+```
 
 
 ## Citation
@@ -115,6 +92,8 @@ If you find BarcodeBERT useful in your research please consider citing:
       primaryClass={cs.LG},
       doi={10.48550/arxiv.2311.02401},
     }
+
+
 
 
 ## Development

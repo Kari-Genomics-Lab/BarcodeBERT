@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import sys
 import os
 import resource
+import sys
 import time
 from itertools import product
 
@@ -10,13 +10,12 @@ import numpy as np
 import pandas as pd
 import sklearn.metrics
 import torch
+import torch.nn.functional as F
 import torch.optim
 from sklearn.neighbors import KNeighborsClassifier
 from torch import nn
-import torch.nn.functional as F
-
-from torchtext.vocab import build_vocab_from_iterator
 from torch.utils.data import DataLoader
+from torchtext.vocab import build_vocab_from_iterator
 
 sys.path.append(".")
 print(sys.path)
@@ -25,9 +24,9 @@ print(os.getcwd())
 from barcodebert import utils
 from barcodebert.datasets import KmerTokenizer
 from barcodebert.io import load_pretrained_model
-
+from baselines.datasets import labels_from_df, representations_from_df
 from baselines.io import load_baseline_model
-from baselines.datasets import representations_from_df, labels_from_df 
+
 
 def run(config):
     r"""
@@ -62,7 +61,6 @@ def run(config):
 
     device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 
-
     # LOGGING =================================================================
     # Setup logging and saving
 
@@ -92,10 +90,10 @@ def run(config):
             job_type=job_type,
             tags=["evaluate", job_type],
         )
-        
+
     # LOAD PRE-TRAINED CHECKPOINT =============================================
     # Map model parameters to be load to the specified gpu.
-    
+
     embedder = load_baseline_model(config.backbone)
     embedder.name = config.backbone
 
@@ -111,12 +109,12 @@ def run(config):
     timing_stats["preamble"] = time.time() - t_start
     t_start_embed = time.time()
 
-    #Data files
+    # Data files
     train_filename = os.path.join(config.data_dir, "supervised_train.csv")
     validation_filename = os.path.join(config.data_dir, "supervised_val.csv")
     test_filename = os.path.join(config.data_dir, "supervised_test.csv")
 
-    #Get pipeline for reference labels:
+    # Get pipeline for reference labels:
     df = pd.read_csv(train_filename, sep="\t" if train_filename.endswith(".tsv") else ",", keep_default_na=False)
     labels = df[target_level].to_list()
     label_set = sorted(set(labels))
@@ -132,12 +130,12 @@ def run(config):
     X_val = representations_from_df(validation_filename, embedder, batch_size=128)
     y_val = labels_from_df(validation_filename, target_level, label_pipeline)
     print(X_test.shape, y_test.shape)
-    
+
     print("Generating embeddings for train set", flush=True)
     X = representations_from_df(train_filename, embedder, batch_size=128)
     y = labels_from_df(train_filename, target_level, label_pipeline)
     print(X.shape, y.shape)
-    
+
     timing_stats["embed"] = time.time() - t_start_embed
 
     # Normalize the features
@@ -150,7 +148,7 @@ def run(config):
     X = torch.tensor(X).float()
     X_val = torch.tensor(X_val).float()
     X_test = torch.tensor(X_test).float()
-    
+
     y = torch.tensor(y)
     y_val = torch.tensor(y_val)
     y_test = torch.tensor(y_test)
@@ -160,10 +158,10 @@ def run(config):
 
     train = torch.utils.data.TensorDataset(X, y)
     train_loader = DataLoader(train, batch_size=64, shuffle=True)
-    
+
     val = torch.utils.data.TensorDataset(X_val, y_val)
     val_loader = DataLoader(val, batch_size=1024, shuffle=False, drop_last=False)
-    
+
     test = torch.utils.data.TensorDataset(X_test, y_test)
     test_loader = DataLoader(test, batch_size=1024, shuffle=False, drop_last=False)
 
@@ -177,7 +175,6 @@ def run(config):
     print(y.min(), y.max())
     print(torch.unique(y).shape[0])
 
-    
     # TRAIN ===================================================================
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(clf.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-5)
@@ -191,7 +188,7 @@ def run(config):
         t_start_epoch = time.time()
         loss_epoch = 0
         acc_epoch = 0
-        
+
         for batch_idx, (X_train, y_train) in enumerate(train_loader):
 
             X_train = X_train.to(device)
@@ -215,31 +212,32 @@ def run(config):
                 acc = 100.0 * acc.item()
                 acc_epoch += acc
 
-        results = {"loss": loss_epoch / (batch_idx + 1),
-                "accuracy": acc_epoch / (batch_idx + 1)}
+        results = {"loss": loss_epoch / (batch_idx + 1), "accuracy": acc_epoch / (batch_idx + 1)}
 
-        val_results = evaluate(val_loader, clf, device, 
-                            partition_name="Val",verbosity=0,
-                            is_distributed=False)
+        val_results = evaluate(val_loader, clf, device, partition_name="Val", verbosity=0, is_distributed=False)
 
         if config.log_wandb:
-            wandb.log({"Training/epochwise/epoch": epoch,
-                        **{f"Training/epochwise/Train/{k}": v for k, v in results.items()},
-                        **{f"Training/epochwise/Val/{k}": v for k, v in val_results.items()},
-                      },step=batch_idx*epoch,
+            wandb.log(
+                {
+                    "Training/epochwise/epoch": epoch,
+                    **{f"Training/epochwise/Train/{k}": v for k, v in results.items()},
+                    **{f"Training/epochwise/Val/{k}": v for k, v in val_results.items()},
+                },
+                step=batch_idx * epoch,
             )
-        
+
         if (epoch + 1) % 20 == 0:
-            print(f"Epoch [{epoch+1}/{num_epochs}], \
-                Loss: {results['loss']:.4f}, Training Accuracy: {results['accuracy']:.4f}", flush=True)  
-            
+            print(
+                f"Epoch [{epoch+1}/{num_epochs}], \
+                Loss: {results['loss']:.4f}, Training Accuracy: {results['accuracy']:.4f}",
+                flush=True,
+            )
 
     ## Test the model after training
-    test_results = evaluate(test_loader, clf, device, 
-                            partition_name="Test",verbosity=1,
-                            is_distributed=False)
+    test_results = evaluate(test_loader, clf, device, partition_name="Test", verbosity=1, is_distributed=False)
 
-    wandb.log({**{f"Eval/Test/{k}": v for k, v in test_results.items()}}, step=batch_idx*num_epochs)
+    wandb.log({**{f"Eval/Test/{k}": v for k, v in test_results.items()}}, step=batch_idx * num_epochs)
+
 
 def evaluate(
     dataloader,
@@ -251,7 +249,7 @@ def evaluate(
 ):
     r"""
     Evaluate model performance on a dataset.
-    
+
     Adapted from: https://github.com/Kari-Genomics-Lab/BIOSCAN_5M_DNA_experiments/blob/main/barcodebert/evaluation.py#L13
 
     Parameters
@@ -283,7 +281,7 @@ def evaluate(
     for sequences, y_true in dataloader:
         sequences = sequences.to(device)
         y_true = y_true.to(device)
-        
+
         with torch.no_grad():
             logits = model(sequences)
             xent = F.cross_entropy(logits, y_true, reduction="none")
@@ -297,7 +295,7 @@ def evaluate(
     xent = np.concatenate(xent_all)
     y_true = np.concatenate(y_true_all)
     y_pred = np.concatenate(y_pred_all)
-    
+
     # If the dataset size was not evenly divisible by the world size,
     # DistributedSampler will pad the end of the list of samples
     # with some repetitions. We need to trim these off.
