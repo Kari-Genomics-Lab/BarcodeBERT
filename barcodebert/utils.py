@@ -281,3 +281,67 @@ def concat_all_gather(tensor, **kwargs):
     torch.distributed.all_gather(tensors_gather, tensor, **kwargs)
     output = torch.cat(tensors_gather, dim=0)
     return output
+
+
+def check_sequence(header, seq):
+    """
+    Adapted from VAMB: https://github.com/RasmussenLab/vamb
+
+    Check that there're no invalid characters or bad format
+    in the file.
+
+    Note: The GAPS ('-') that are introduced from alignment
+    are considered valid characters.
+    """
+
+    if len(header) > 0 and (header[0] in (">", "#") or header[0].isspace()):
+        raise ValueError("Bad character in sequence header")
+    if "\t" in header:
+        raise ValueError("tab included in header")
+
+    #Preprocessing of sequence before tokenization
+    basemask = bytearray.maketrans(b"acgtuUswkmyrbdhvnSWKMBDHV", b"ACGTTTNNNNNNNNNNNNNNNNNNN")
+
+    masked = seq.translate(basemask, b" \t\n\r")
+    stripped = masked.translate(None, b"ACGTNYR-") #Valid characters
+    if len(stripped) > 0:
+        bad_character = chr(stripped[0])
+        msg = "Invalid DNA byte in sequence {}: '{}'"
+        raise ValueError(msg.format(header, bad_character))
+    return masked
+
+def read_fasta(fname):
+
+    barcodes = []
+    ids = []
+    lines = []
+    seq_id = ""
+
+    for line in open(fname, "rb"):
+        if line.startswith(b"#"):
+            pass
+
+        elif line.startswith(b">"):
+            if seq_id != "":
+                seq = bytearray().join(lines)
+
+                # Check entry is valid
+                seq = check_sequence(seq_id, seq)
+
+                # Save the barcode
+                barcodes.append(seq.decode())
+
+                lines = []
+                ids.append(seq_id)
+                seq_id = line[1:-1].decode()  # Modify this according to your labels.
+            seq_id = line[1:-1].decode()
+        else:
+            lines += [line.strip()]
+
+    seq = bytearray().join(lines)
+    seq = check_sequence(seq_id, seq)
+    # Save the barcode
+    barcodes.append(seq.decode())
+    ids.append(seq_id)
+
+    return barcodes, ids

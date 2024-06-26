@@ -14,15 +14,21 @@ from torchtext.vocab import build_vocab_from_iterator
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
+from barcodebert.utils import read_fasta
+
 
 class DNADataset(Dataset):
     def __init__(self, file_path, embedder, randomize_offset=False, max_length=660):
         self.randomize_offset = randomize_offset
 
-        df = pd.read_csv(file_path, sep="\t" if file_path.endswith(".tsv") else ",", keep_default_na=False)
-        self.barcodes = df["nucleotides"].to_list()
+        if file_path.endswith((".tsv",".csv")):
 
-        self.ids = df["species_index"].to_list()  # ideally, this should be process id
+            df = pd.read_csv(file_path, sep="\t" if file_path.endswith(".tsv") else ",", keep_default_na=False)
+            self.barcodes = df["nucleotides"].to_list()
+            self.ids = df["species_index"].to_list()  # ideally, this should be process id
+        elif file_path.endswith((".fas",".fa", ".fasta")):
+            self.barcodes, self.ids = read_fasta(file_path)
+        
         self.tokenizer = embedder.tokenizer
         self.backbone_name = embedder.name
         self.max_len = max_length
@@ -60,7 +66,7 @@ class DNADataset(Dataset):
         return processed_barcode, label
 
 
-def representations_from_df(filename, embedder, batch_size=128):
+def representations_from_file(filename, embedder, batch_size=128):
 
     # create embeddings folder
     if not os.path.isdir("embeddings"):
@@ -171,3 +177,12 @@ def labels_from_df(filename, target_level, label_pipeline):
     labels = df[target_level].to_list()
     return np.array(list(map(label_pipeline, labels)))
     # return df[target_level].to_numpy()
+
+
+def labels_from_fasta(filename, target_level, label_pipeline):
+    taxonomy = ["class", "order", "family", "subfamily", "tribe", "genus", "species"]
+    _, ids = read_fasta(filename)
+    labels = np.array([tag.split(" ")[1] for tag in ids])
+    labels= np.array([tag.split("|")[taxonomy.index(target_level)] for tag in labels])
+    
+    return np.array(list(map(label_pipeline, labels)))

@@ -24,7 +24,7 @@ print(os.getcwd())
 from barcodebert import utils
 from barcodebert.datasets import KmerTokenizer
 from barcodebert.io import load_pretrained_model
-from baselines.datasets import labels_from_df, representations_from_df
+from baselines.datasets import labels_from_df, representations_from_file
 from baselines.io import load_baseline_model
 
 
@@ -122,17 +122,17 @@ def run(config):
 
     # Generate emebddings for the training, test and validation sets
     print("Generating embeddings for test set", flush=True)
-    X_test = representations_from_df(test_filename, embedder, batch_size=128)
+    X_test = representations_from_file(test_filename, embedder, batch_size=128)
     y_test = labels_from_df(test_filename, target_level, label_pipeline)
     print(X_test.shape, y_test.shape)
 
     print("Generating embeddings for validation set", flush=True)
-    X_val = representations_from_df(validation_filename, embedder, batch_size=128)
+    X_val = representations_from_file(validation_filename, embedder, batch_size=128)
     y_val = labels_from_df(validation_filename, target_level, label_pipeline)
     print(X_test.shape, y_test.shape)
 
     print("Generating embeddings for train set", flush=True)
-    X = representations_from_df(train_filename, embedder, batch_size=128)
+    X = representations_from_file(train_filename, embedder, batch_size=128)
     y = labels_from_df(train_filename, target_level, label_pipeline)
     print(X.shape, y.shape)
 
