@@ -2,11 +2,7 @@
 Input/output utilities.
 """
 
-import os
-from inspect import getsourcefile
-
 import torch
-from transformers import BertConfig, BertForMaskedLM, BertForTokenClassification
 
 from baselines.embedders import (
     BarcodeBERTEmbedder,
@@ -15,13 +11,6 @@ from baselines.embedders import (
     HyenaDNAEmbedder,
     NucleotideTransformerEmbedder,
 )
-
-# PACKAGE_DIR = os.path.dirname(os.path.abspath(getsourcefile(lambda: 0)))
-
-
-# def get_project_root() -> str:
-#    return os.path.dirname(PACKAGE_DIR)
-
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print("Using device:", device)

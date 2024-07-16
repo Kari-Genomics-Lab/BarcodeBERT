@@ -1,15 +1,6 @@
-# -*- coding: utf-8 -*-
-# https://github.com/HazyResearch/hyena-dna/blob/main/standalone_hyenadna.py
-"""HyenaDNA training & inference example (Public)
-
-This code is adapted from the original colab tutorial on HyenaDNA. Check that out for an easier entry point into the code.
-
-We provide the code here as an example for those who want something outside collab, with Huggingface integration.
-
-Original file is located at
-    https://colab.research.google.com/drive/1wyVEQd4R3HYLTUOXEEQmp_I8aNC_aLhL
-
-
+"""
+HyenaDNA training & inference example
+Adapted from public code @ https://github.com/HazyResearch/hyena-dna/blob/main/standalone_hyenadna.py
 """
 
 import json
@@ -17,12 +8,9 @@ import math
 import os
 import re
 import subprocess
-from collections import namedtuple
 from functools import partial
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
-
-import numpy as np
 
 # @title Imports
 # for HyenaDNA specifically
@@ -30,23 +18,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-from torch import Tensor
 from torchvision.ops import StochasticDepth
 from transformers import PreTrainedModel
 from transformers.tokenization_utils import AddedToken, PreTrainedTokenizer
-
-"""# HyenaDNA
-
-
-"""
-
-# @title Hyena layer
 
 
 def fftconv(u, k, D):
     """
     We apply a convolution through the fourier domain (from the Convolution Theorem)
-
     """
     seqlen = u.shape[-1]
     fft_size = 2 * seqlen
@@ -83,7 +62,7 @@ class OptimModule(nn.Module):
                 optim["lr"] = lr
             if wd is not None:
                 optim["weight_decay"] = wd
-            setattr(getattr(self, name), "_optim", optim)
+            getattr(self, name)._optim = optim
 
 
 class Sin(nn.Module):
@@ -202,7 +181,7 @@ class HyenaFilter(OptimModule):
             nn.Linear(emb_dim, order),
             act,
         )
-        for i in range(num_inner_mlps):
+        for _i in range(num_inner_mlps):
             self.implicit_filter.append(nn.Linear(order, order))
             self.implicit_filter.append(act)
 
@@ -212,9 +191,10 @@ class HyenaFilter(OptimModule):
 
         self.normalized = normalized
         for c in self.implicit_filter.children():
-            for name, v in c.state_dict().items():
+            for name, _v in c.state_dict().items():
                 optim = {"weight_decay": wd, "lr": lr}
-                setattr(getattr(c, name), "_optim", optim)
+                attr = getattr(c, name)
+                attr._optim = optim
 
     def filter(self, L, *args, **kwargs):
         z, t = self.pos_emb(L)
@@ -270,8 +250,8 @@ class HyenaOperator(nn.Module):
         )
 
     def forward(self, u, *args, **kwargs):
-        l = u.size(-2)
-        l_filter = min(l, self.l_max)
+        l_input = u.size(-2)
+        l_filter = min(l_input, self.l_max)
         u = self.in_proj(u)
         u = rearrange(u, "b l d -> b d l")
 
@@ -293,11 +273,9 @@ class HyenaOperator(nn.Module):
 
 
 # @title Self-Attention (alternative)
-
-"""
-If you'd like to try the HyenaDNA model using attention instead, you can. ie,
-use a regular decoder only Transformer.
-"""
+# If you'd like to try the HyenaDNA model using attention instead, you can. ie,
+# use a regular decoder only Transformer.
+#
 
 
 class SelfAttention(nn.Module):
@@ -434,10 +412,7 @@ class MHA(nn.Module):
 
 
 # @title MLP layer
-
-"""
-The MLP layer after the mixer layer (HyenaOperator).
-"""
+# The MLP layer after the mixer layer (HyenaOperator).
 
 
 class Mlp(nn.Module):
@@ -473,10 +448,9 @@ class Mlp(nn.Module):
 
 # @title Block layer (Hyena + MLP layers)
 
-"""
-A block consists of a Mixer layer (Hyena or attention), and a MLP layer.
-
-"""
+# """
+# A block consists of a Mixer layer (Hyena or attention), and a MLP layer.
+# """
 
 
 class LinearResidual(nn.Linear):
@@ -689,11 +663,10 @@ def _init_weights(module, n_layer, initializer_range=0.02, rescale_prenorm_resid
 
 # @title Backbone model (stack of blocks)
 
-"""
-A backbone model consists of a stack of blocks. If you use attention, then
-positional embeddings are included. When using Hyena, then the pos emb
-revert to doing nothing.
-"""
+
+# A backbone model consists of a stack of blocks. If you use attention, then
+# positional embeddings are included. When using Hyena, then the pos emb
+# revert to doing nothing.
 
 
 class GPT2Embeddings(nn.Module):
@@ -816,16 +789,14 @@ class LMBackbone(nn.Module):
 
 # @title Decoder head layer
 
-"""
-A simple decoder head (using MLP) to predict a sequence level classification.
-You have the option to average across all the tokens in a sequence or using the
-"last" token to classify.  At least, those 2 worked best for us, but we provide
-other "modes" as well.
 
-We only need this for classification.  Otherwise we'll use the hidden
-states of the backbone as embeddings.
+# A simple decoder head (using MLP) to predict a sequence level classification.
+# You have the option to average across all the tokens in a sequence or using the
+# "last" token to classify.  At least, those 2 worked best for us, but we provide
+# other "modes" as well.
 
-"""
+# We only need this for classification.  Otherwise we'll use the hidden
+# states of the backbone as embeddings.
 
 
 class SequenceDecoder(nn.Module):
@@ -878,18 +849,6 @@ class SequenceDecoder(nn.Module):
                 torch.cumsum(x, dim=-2) / torch.arange(1, 1 + x.size(-2), device=x.device, dtype=x.dtype).unsqueeze(-1)
             )[..., -l_output:, :]
 
-            def restrict(x):
-                L = x.size(-2)
-                s = x.sum(dim=-2, keepdim=True)
-                if l_output > 1:
-                    c = torch.cumsum(x[..., -(l_output - 1) :, :].flip(-2), dim=-2)
-                    c = F.pad(c, (0, 0, 1, 0))
-                    s = s - c  # (B, l_output, D)
-                    s = s.flip(-2)
-                denom = torch.arange(L - l_output + 1, L + 1, dtype=x.dtype, device=x.device)
-                s = s / denom
-                return s
-
         elif self.mode == "sum":
             restrict = lambda x: torch.cumsum(x, dim=-2)[..., -l_output:, :]
             # TODO use same restrict function as pool case
@@ -925,16 +884,14 @@ class SequenceDecoder(nn.Module):
 
 # @title Model (backbone + head)
 
-"""
-Putting it all together, the model consists of a backbone model
-and a decoder head (you can turn off head for embeddings only too).
 
-Here we use a simple head to do multi-classification, but
-can also swap the head to do next token prediction too.  We defer to the main
-HyenaDNA for that code, since pretraining with next token prediction isn't quite
-feasible on colab.
+# Putting it all together, the model consists of a backbone model
+# and a decoder head (you can turn off head for embeddings only too).
 
-"""
+# Here we use a simple head to do multi-classification, but
+# can also swap the head to do next token prediction too.  We defer to the main
+# HyenaDNA for that code, since pretraining with next token prediction isn't quite
+# feasible on colab.
 
 
 class HyenaDNAModel(nn.Module):
@@ -1013,21 +970,18 @@ class HyenaDNAModel(nn.Module):
             return hidden_states
 
 
-"""# Data pipeline
+# Data pipeline
 
-
-"""
 
 # @title Tokenizer
 
-"""
-Just a simple character level tokenizer.
 
-From: https://github.com/dariush-bahrami/character-tokenizer/blob/master/charactertokenizer/core.py
+# Just a simple character level tokenizer.
 
-CharacterTokenzier for Hugging Face Transformers.
-This is heavily inspired from CanineTokenizer in transformers package.
-"""
+# From: https://github.com/dariush-bahrami/character-tokenizer/blob/master/charactertokenizer/core.py
+
+# CharacterTokenzier for Hugging Face Transformers.
+# This is heavily inspired from CanineTokenizer in transformers package.
 
 
 class CharacterTokenizer(PreTrainedTokenizer):
@@ -1058,7 +1012,6 @@ class CharacterTokenizer(PreTrainedTokenizer):
         self.characters = characters
         self.model_max_length = model_max_length
         bos_token = AddedToken("[BOS]", lstrip=False, rstrip=False)
-        eos_token = AddedToken("[SEP]", lstrip=False, rstrip=False)
         sep_token = AddedToken("[SEP]", lstrip=False, rstrip=False)
         cls_token = AddedToken("[CLS]", lstrip=False, rstrip=False)
         pad_token = AddedToken("[PAD]", lstrip=False, rstrip=False)
@@ -1205,7 +1158,7 @@ def load_weights(scratch_dict, pretrained_dict, checkpointing=False):
     # find the corresponding weights in the loaded model, and set it
 
     # need to do some state dict "surgery"
-    for key, value in scratch_dict.items():
+    for key, _value in scratch_dict.items():
         if "backbone" in key:
             # the state dicts differ by one prefix, '.model', so we add that
             key_loaded = "model." + key
@@ -1215,8 +1168,8 @@ def load_weights(scratch_dict, pretrained_dict, checkpointing=False):
                 key_loaded = inject_substring(key_loaded)
             try:
                 scratch_dict[key] = pretrained_dict[key_loaded]
-            except:
-                raise Exception("key mismatch in the state dicts!")
+            except Exception as e:
+                raise Exception(f"Key mismatch in the state dicts! Original error: {e}")
 
     # scratch_dict has been updated
     return scratch_dict
@@ -1248,11 +1201,9 @@ class HyenaDNAPreTrainedModel(PreTrainedModel):
         n_classes=2,
     ):
 
-        # TODO make this use the default huggingface cache path.
-
         # first check if it is a local path
         pretrained_model_name_or_path = os.path.join(path, model_name)
-        if os.path.isdir(pretrained_model_name_or_path) and download == False:
+        if os.path.isdir(pretrained_model_name_or_path) and download is False:
             if config is None:
                 config = json.load(open(os.path.join(pretrained_model_name_or_path, "config.json")))
         else:
@@ -1272,7 +1223,7 @@ class HyenaDNAPreTrainedModel(PreTrainedModel):
 
         # need to load weights slightly different if using gradient checkpointing
         if config.get("checkpoint_mixer", False):
-            checkpointing = config["checkpoint_mixer"] == True or config["checkpoint_mixer"] == True
+            checkpointing = config["checkpoint_mixer"] is True or config["checkpoint_mixer"] is True
         else:
             checkpointing = False
 

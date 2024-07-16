@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-import pandas as pd
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+
+import pandas as pd
+
+warnings.simplefilter(action="ignore", category=FutureWarning)
 
 import argparse
-import os
 
 
 def split_df(filename):
@@ -46,8 +47,8 @@ def split_df(filename):
         columns={
             "order": "order_name",
             "family": "family_name",
-            "subfamily":"subfamily_name",
-            "genus":"genus_name",
+            "subfamily": "subfamily_name",
+            "genus": "genus_name",
             "species": "species_name",
             "dna_barcode": "nucleotides",
         }
@@ -69,22 +70,23 @@ def split_df(filename):
         & (bioscan_5M.nucleotides != "no_data")
         & (bioscan_5M.duplicated(subset=["nucleotides"]))
     ]
-    print(f"There are {len(duplicates)} specimens with a repeated  DNA sequence")
-    print()
 
-    # Duplicated sequences with different sequence identifiers
-    duplicates = bioscan_5M[
-        bioscan_5M["nucleotides"].notna()
-        & (bioscan_5M["nucleotides"] != "no_data")
-        & (bioscan_5M.duplicated(subset=["nucleotides"], keep=False))
-    ]
-    inconsistent_duplicates = duplicates.groupby("nucleotides").filter(lambda x: x["species_name"].nunique() > 1)
-    sorted_duplicates = inconsistent_duplicates.sort_values(by="nucleotides")
-   
+    if len(duplicates) > 0:
+        print(f"There are {len(duplicates)} specimens with a repeated  DNA sequence")
+        print()
 
-    # Drop duplicated sequences and get dataset ready to produce DNA splits
-    bioscan_5M.drop_duplicates(subset=["nucleotides"], inplace=True)
-    bioscan_5M.drop(columns=["image_file", "chunk_number"], inplace=True)
+        # Duplicated sequences with different sequence identifiers
+        duplicates = bioscan_5M[
+            bioscan_5M["nucleotides"].notna()
+            & (bioscan_5M["nucleotides"] != "no_data")
+            & (bioscan_5M.duplicated(subset=["nucleotides"], keep=False))
+        ]
+        inconsistent_duplicates = duplicates.groupby("nucleotides").filter(lambda x: x["species_name"].nunique() > 1)
+        sorted_duplicates = inconsistent_duplicates.sort_values(by="nucleotides")
+        print(sorted_duplicates)
+
+        # Drop duplicated sequences and get dataset ready to produce DNA splits
+        bioscan_5M.drop_duplicates(subset=["nucleotides"], inplace=True)
 
     # Distribution of samples in each split
     print(bioscan_5M.groupby("split").count())
@@ -117,21 +119,20 @@ def split_df(filename):
     unseen_species = unseen["species_name"].unique()
     print(len(unseen_species))
 
-    #Number of repeated species from "test" split in pretrain split
+    # Number of repeated species from "test" split in pretrain split
     intersection_records = set(train_species).intersection(set(test_species))
     print(f"There are { len(intersection_records)} repeated species from test split in train split")
     print()
 
-    #Number of repeated species from "unseen" split in "train" split
+    # Number of repeated species from "unseen" split in "train" split
     intersection_records = set(train_species).intersection(set(unseen_species))
     print(f"There are { len(intersection_records)} repeated species from unseen split in train split")
     print()
 
-    #Number of repeated species from "unseen" split in "pretrain" split
+    # Number of repeated species from "unseen" split in "pretrain" split
     intersection_records = set(pretrain_species).intersection(set(unseen_species))
     print(f"There are { len(intersection_records)} repeated species from unseen split in pretrain split")
     print()
-
 
     # Get unique genera
     train_genera = train["genus_name"].unique()
@@ -146,14 +147,15 @@ def split_df(filename):
     print(f"There are {len(intersection_records)} out {len(unseen_genera)} genera from unseen split in train split")
     print()
 
-    #Save individual .csv files for compatibility
+    # Save individual .csv files for compatibility
     pretrain.to_csv("pre_training.csv", index=False)
     train.to_csv("supervised_train.csv", index=False)
     test.to_csv("supervised_test.csv", index=False)
     unseen.to_csv("unseen.csv", index=False)
 
-    #Don't forget validation
+    # Don't forget validation
     bioscan_5M[bioscan_5M["split"] == "val"].to_csv("supervised_val.csv", index=False)
+
 
 def main():
     parser = argparse.ArgumentParser()

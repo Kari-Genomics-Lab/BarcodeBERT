@@ -15,7 +15,6 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 from einops import rearrange
-from torch.nn.modules.utils import consume_prefix_in_state_dict_if_present
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import MaskedLMOutput, SequenceClassifierOutput
 from transformers.models.bert.modeling_bert import BertPreTrainedModel
@@ -30,7 +29,7 @@ from .dnabert2_padding import (
 
 try:
     from .flash_attn_triton import flash_attn_qkvpacked_func
-except ImportError as e:
+except ImportError:
     flash_attn_qkvpacked_func = None
 
 logger = logging.getLogger(__name__)
@@ -83,11 +82,9 @@ class BertEmbeddings(nn.Module):
                 assert isinstance(self.token_type_ids, torch.LongTensor)
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
                 buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
-                token_type_ids = buffered_token_type_ids_expanded  # type: ignore
+                token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = torch.zeros(
-                    input_shape, dtype=torch.long, device=self.word_embeddings.device  # type: ignore
-                )  # type: ignore  # yapf: disable
+                token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=self.word_embeddings.device)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -120,7 +117,9 @@ class BertUnpadSelfAttention(nn.Module):
         # Warn if defaulting to pytorch because of import issues
         if flash_attn_qkvpacked_func is None:
             warnings.warn(
-                "Unable to import Triton; defaulting MosaicBERT attention implementation to pytorch (this will reduce throughput when using this model)."
+                "Unable to import Triton; defaulting MosaicBERT attention \
+                implementation to pytorch (this will reduce throughput when using this model).",
+                stacklevel=2,
             )
 
     def forward(
@@ -410,7 +409,7 @@ class BertEncoder(nn.Module):
         # Add alibi matrix to extended_attention_mask
         if self._current_alibi_size < seqlen:
             # Rebuild the alibi tensor when needed
-            warnings.warn(f"Increasing alibi size from {self._current_alibi_size} to {seqlen}")
+            warnings.warn(f"Increasing alibi size from {self._current_alibi_size} to {seqlen}", stacklevel=2)
             self.rebuild_alibi_tensor(size=seqlen, device=hidden_states.device)
         elif self.alibi.device != hidden_states.device:
             # Device catch-up
@@ -592,7 +591,7 @@ class BertModel(BertPreTrainedModel):
         else:
             # TD [2022-03-01]: the indexing here is very tricky.
             attention_mask_bool = attention_mask.bool()
-            subset_idx = subset_mask[attention_mask_bool]  # type: ignore
+            subset_idx = subset_mask[attention_mask_bool]
             sequence_output = encoder_outputs[-1][masked_tokens_mask[attention_mask_bool][subset_idx]]
             if self.pooler is not None:
                 pool_input = encoder_outputs[-1][first_col_mask[attention_mask_bool][subset_idx]]
@@ -658,7 +657,8 @@ class BertForMaskedLM(BertPreTrainedModel):
         if config.is_decoder:
             warnings.warn(
                 "If you want to use `BertForMaskedLM` make sure `config.is_decoder=False` for "
-                "bi-directional self-attention."
+                "bi-directional self-attention.",
+                stacklevel=2,
             )
 
         self.bert = BertModel(config, add_pooling_layer=False)
