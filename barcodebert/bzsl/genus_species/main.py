@@ -7,7 +7,10 @@ import numpy as np
 import torch
 
 from barcodebert.bzsl.genus_species.bayesian_classifier import (
-    BayesianClassifier, apply_pca, calculate_priors)
+    BayesianClassifier,
+    apply_pca,
+    calculate_priors,
+)
 from barcodebert.bzsl.genus_species.dataset import get_data_splits, load_data
 
 

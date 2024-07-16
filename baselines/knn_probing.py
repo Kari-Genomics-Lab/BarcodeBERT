@@ -1,26 +1,20 @@
 #!/usr/bin/env python
 
 import os
-import resource
 import sys
 import time
-from itertools import product
 
 import pandas as pd
 import sklearn.metrics
 import torch
 import torch.optim
 from sklearn.neighbors import KNeighborsClassifier
-from torch import nn
-from torchtext.vocab import build_vocab_from_iterator
 
 sys.path.append(".")
 print(sys.path)
 print(os.getcwd())
 
 from barcodebert import utils
-from barcodebert.datasets import KmerTokenizer
-from barcodebert.io import load_pretrained_model
 from baselines.datasets import labels_from_df, representations_from_df
 from baselines.io import load_baseline_model
 
@@ -55,8 +49,6 @@ def run(config):
     print(config)
     print()
     print(f"Found {torch.cuda.device_count()} GPUs and {utils.get_num_cpu_available()} CPUs.", flush=True)
-
-    device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 
     # LOAD PRE-TRAINED CHECKPOINT =============================================
     # Map model parameters to be load to the specified gpu.

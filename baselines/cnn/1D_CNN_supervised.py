@@ -77,7 +77,7 @@ def data_from_df(df, target_level, label_pipeline):
     nucleotide_dict = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}
     X = np.zeros((N, sl, 5), dtype=np.float32)
     for i in range(N):
-        
+
         for j in range(sl):
             if len(barcodes[i]) > j:
                 k = nucleotide_dict[barcodes[i][j]]
@@ -144,7 +144,7 @@ for epoch in range(20):
     total_acc, total_count = 0, 0
 
     with torch.no_grad():
-        for idx, (inputs, labels) in enumerate(test_loader):
+        for _idx, (inputs, labels) in enumerate(test_loader):
             inputs, labels = inputs.view(-1, 1, 660, 5).to(device), labels.to(device)
             predicted_label = model(inputs)
             loss = criterion(predicted_label, labels)

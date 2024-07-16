@@ -14,8 +14,10 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from barcodebert.bzsl.feature_extraction import (
-    extract_clean_barcode_list, extract_clean_barcode_list_for_aligned,
-    extract_dna_features)
+    extract_clean_barcode_list,
+    extract_clean_barcode_list_for_aligned,
+    extract_dna_features,
+)
 from barcodebert.bzsl.models import load_model
 
 device = torch.device("cuda") if torch.cuda.is_available() else "cpu"

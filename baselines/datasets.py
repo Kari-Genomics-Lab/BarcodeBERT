@@ -4,15 +4,12 @@ Datasets.
 
 import os
 import pickle
-from itertools import product
 
 import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-from torchtext.vocab import build_vocab_from_iterator
 from tqdm.auto import tqdm
-from transformers import AutoTokenizer
 
 
 class DNADataset(Dataset):
@@ -85,7 +82,7 @@ def representations_from_df(filename, embedder, batch_size=128):
 
     if os.path.exists(out_fname):
         print(f"We found the file {out_fname}. It seems that we have computed the embeddings ... \n")
-        print(f"Loading the embeddings from that file")
+        print("Loading the embeddings from that file")
 
         with open(out_fname, "rb") as handle:
             embeddings = pickle.load(handle)
@@ -108,7 +105,7 @@ def representations_from_df(filename, embedder, batch_size=128):
         embeddings_list = []
         id_list = []
         with torch.no_grad():
-            for batch_idx, (sequences, _id) in tqdm(enumerate(dataloader_val)):
+            for _batch_idx, (sequences, _id) in tqdm(enumerate(dataloader_val)):
                 sequences = sequences.view(-1, sequences.shape[-1]).to(device)
                 # print(sequences.shape)
                 att_mask = sequences != 1

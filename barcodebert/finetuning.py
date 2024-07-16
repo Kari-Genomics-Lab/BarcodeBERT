@@ -19,8 +19,7 @@ from transformers.modeling_outputs import TokenClassifierOutput
 from barcodebert import utils
 from barcodebert.datasets import DNADataset
 from barcodebert.evaluation import evaluate
-from barcodebert.io import (get_project_root, load_pretrained_model,
-                            safe_save_model)
+from barcodebert.io import get_project_root, load_pretrained_model, safe_save_model
 
 BASE_BATCH_SIZE = 64
 

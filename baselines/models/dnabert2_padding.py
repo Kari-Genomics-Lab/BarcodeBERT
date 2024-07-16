@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Adapted from https://github.com/HazyResearch/flash-attention/blob/main/flash_attn/bert_padding.py
-# Which was adapted from https://github.com/mlcommons/training_results_v1.1/blob/main/NVIDIA/benchmarks/bert/implementations/pytorch/padding.py
+# Which was adapted from
+# https://github.com/mlcommons/training_results_v1.1/blob/main/NVIDIA/benchmarks/bert/implementations/pytorch/padding.py
 
 
 from typing import Tuple, cast
@@ -26,7 +27,7 @@ class IndexFirstAxis(torch.autograd.Function):
         """
         ctx.save_for_backward(indices)
         assert input.ndim >= 2
-        ctx.first_axis_dim, other_shape = input.shape[0], input.shape[1:]  # type: ignore
+        ctx.first_axis_dim, other_shape = input.shape[0], input.shape[1:]
         second_dim = other_shape.numel()  # product of sizes of all but first dimension
         # TD [2022-03-04] For some reason torch.gather is a bit faster than indexing.
         return torch.gather(

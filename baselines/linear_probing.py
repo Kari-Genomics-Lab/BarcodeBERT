@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 
 import os
-import resource
 import sys
 import time
-from itertools import product
 
 import numpy as np
 import pandas as pd
@@ -12,18 +10,13 @@ import sklearn.metrics
 import torch
 import torch.nn.functional as F
 import torch.optim
-from sklearn.neighbors import KNeighborsClassifier
-from torch import nn
 from torch.utils.data import DataLoader
-from torchtext.vocab import build_vocab_from_iterator
 
 sys.path.append(".")
 print(sys.path)
 print(os.getcwd())
 
 from barcodebert import utils
-from barcodebert.datasets import KmerTokenizer
-from barcodebert.io import load_pretrained_model
 from baselines.datasets import labels_from_df, representations_from_df
 from baselines.io import load_baseline_model
 
@@ -181,15 +174,13 @@ def run(config):
 
     clf.to(device)
     timing_stats = {}
-    t_end_epoch = time.time()
 
     num_epochs = 200
     for epoch in range(num_epochs):
-        t_start_epoch = time.time()
         loss_epoch = 0
         acc_epoch = 0
 
-        for batch_idx, (X_train, y_train) in enumerate(train_loader):
+        for _batch_idx, (X_train, y_train) in enumerate(train_loader):
 
             X_train = X_train.to(device)
             y_train = y_train.to(device)
@@ -212,7 +203,7 @@ def run(config):
                 acc = 100.0 * acc.item()
                 acc_epoch += acc
 
-        results = {"loss": loss_epoch / (batch_idx + 1), "accuracy": acc_epoch / (batch_idx + 1)}
+        results = {"loss": loss_epoch / (_batch_idx + 1), "accuracy": acc_epoch / (_batch_idx + 1)}
 
         val_results = evaluate(val_loader, clf, device, partition_name="Val", verbosity=0, is_distributed=False)
 
@@ -223,7 +214,7 @@ def run(config):
                     **{f"Training/epochwise/Train/{k}": v for k, v in results.items()},
                     **{f"Training/epochwise/Val/{k}": v for k, v in val_results.items()},
                 },
-                step=batch_idx * epoch,
+                step=_batch_idx * epoch,
             )
 
         if (epoch + 1) % 20 == 0:
@@ -233,10 +224,10 @@ def run(config):
                 flush=True,
             )
 
-    ## Test the model after training
+    # Test the model after training
     test_results = evaluate(test_loader, clf, device, partition_name="Test", verbosity=1, is_distributed=False)
 
-    wandb.log({**{f"Eval/Test/{k}": v for k, v in test_results.items()}}, step=batch_idx * num_epochs)
+    wandb.log({**{f"Eval/Test/{k}": v for k, v in test_results.items()}}, step=_batch_idx * num_epochs)
 
 
 def evaluate(

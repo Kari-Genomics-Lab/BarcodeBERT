@@ -3,10 +3,8 @@
 import builtins
 import copy
 import os
-import shutil
 import sys
 import time
-from datetime import datetime
 from socket import gethostname
 
 import numpy as np
@@ -22,8 +20,6 @@ from transformers.modeling_outputs import TokenClassifierOutput
 sys.path.append(".")
 
 from barcodebert import utils
-from barcodebert.datasets import DNADataset
-from barcodebert.io import load_pretrained_model, safe_save_model
 from baselines.datasets import DNADataset
 from baselines.io import load_baseline_model
 
