@@ -125,10 +125,8 @@ class DNABertEmbedder(BaseEmbedder):
         # check if path exists
 
         if not os.path.exists(dnabert_path):
-            print(
-                f"Path {dnabert_path} does not exists, check if the wrong path was given. \
-                  If not download from https://github.com/jerryji1993/DNABERT"
-            )
+            print(f"Path {dnabert_path} does not exists, check if the wrong path was given. \
+                  If not download from https://github.com/jerryji1993/DNABERT")
 
         config = BertConfig.from_pretrained(dnabert_path)
         self.tokenizer = BertTokenizer.from_pretrained(dnabert_path)
